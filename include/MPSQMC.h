@@ -147,6 +147,9 @@ class MPSQMC{
       //To control the populations on each rank
       void PopulationBalancing();
       
+      //BubbleSort algorithm. Modifies order so that for all index: values[ order[index] ] >= values[ order[index+1] ].
+      void BubbleSort(double * values, int * order, const int length);
+      
 };
 
 #endif

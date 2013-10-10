@@ -1,9 +1,10 @@
+#include "MPItag.h" //Here USE_MPI_IN_MPSQMC can be defined to switch to non-MPI compilers.
+
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include <omp.h>
 #include <time.h>
 
-#include "MPItag.h" //Here USE_MPI_IN_MPSQMC can be defined to switch to non-MPI compilers.
 #include "Random.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on September 4, 2013 */

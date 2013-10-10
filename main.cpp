@@ -25,10 +25,10 @@ int main(void){
    cout.precision(15);
    
    //MPOcheck();
-   DMRGcheck();
+   //DMRGcheck();
    //RNcheck();
    //MPSQMCcheck();
-   //HeisenbergSquareLattice();
+   HeisenbergSquareLattice();
    
    #ifdef USE_MPI_IN_MPSQMC
       MPI::Finalize();
@@ -69,10 +69,11 @@ void HeisenbergSquareLattice(){
    theMPO.findNonZeroContributions();
    
    Random RN;
-   /* Large DMRG calculations */
+   
+   /* DMRG calculations */
    const bool doDMRG = true;
    if ((rank==0) && (doDMRG)){
-      int D = 5;
+      int D = 2;
       MPSstate Psi0(length, D, d, &RN);
       DMRG theSolver(&Psi0, &theMPO);
       double Energy = theSolver.Solve();

@@ -60,11 +60,14 @@ class MPSQMC{
       //Propagate my population of walkers for 1 timestep. Return the sum of the coeff of my walkers.
       double PropagateSeparately();
       
+      //Add the current walker energy to walkerEnergyHistorySum[walker] & return the fluctuation metric for the current step
+      double updateEnergyHistory(const int step);
+      
       //Control the population of walkers based on scaling * weight
       void SeparatePopulationControl(const double scaling);
       
-      //Write the projected and target energy
-      void write(const double projectedEnergy, const double targetEnergy);
+      //Write the projected energy, target energy, and fluctuation metric at MC time "step"
+      void write(const int step, const double projectedEnergy, const double targetEnergy, const double fluctMetric);
       
       /****************************
       *** Trial wfn information ***
@@ -82,9 +85,9 @@ class MPSQMC{
       //Specific MPO terms times trial wfn (one array per thread)
       MPSstate *** MPOtermsPsi0;
       
-      /*************************************************************************
-      *** Arrays to store the walkers, their coefficients and their overlaps ***
-      *************************************************************************/
+      /****************************************************************************************************
+      *** Arrays to store the walkers, their coefficients, their overlaps, and their energy history sum ***
+      ****************************************************************************************************/
       
       //Whether or not the walkers were set up
       bool bSetupWalkers;
@@ -106,6 +109,12 @@ class MPSQMC{
       
       //The walker overlaps with the trial wfn: copy array
       double * walkerOverlapCopy;
+      
+      //The sum of the energies at each previous time step per walker
+      double * walkerEnergyHistorySum;
+      
+      //The sum of the energies at each previous time step per walker: copy array
+      double * walkerEnergyHistorySumCopy;
       
       /***************************************************
       *** For MPI: some helper variables and functions ***

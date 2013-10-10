@@ -111,6 +111,8 @@ MPSQMC::~MPSQMC(){
       delete [] walkerCoeffCopy;
       delete [] walkerOverlap;
       delete [] walkerOverlapCopy;
+      delete [] walkerEnergyHistorySum;
+      delete [] walkerEnergyHistorySumCopy;
       
       for (int cnt=0; cnt<myNOpenMPthreads; cnt++){ delete [] thePDF[cnt]; }
       delete [] thePDF;
@@ -211,6 +213,8 @@ void MPSQMC::SetupWalkers(){
       walkerCoeffCopy = new double[myMaxNWalkers];
       walkerOverlap = new double[myMaxNWalkers];
       walkerOverlapCopy = new double[myMaxNWalkers];
+      walkerEnergyHistorySum = new double[myMaxNWalkers];
+      walkerEnergyHistorySumCopy = new double[myMaxNWalkers];
       
       thePDF = new double*[myNOpenMPthreads];
       for (int cnt=0; cnt<myNOpenMPthreads; cnt++){ thePDF[cnt] = new double[nMPOterms+1]; }
@@ -224,6 +228,8 @@ void MPSQMC::SetupWalkers(){
          walkerCoeffCopy[cnt] = 0.0;
          walkerOverlap[cnt] = 1.0;
          walkerOverlapCopy[cnt] = 0.0;
+         walkerEnergyHistorySum[cnt] = 0.0;
+         walkerEnergyHistorySumCopy[cnt] = 0.0;
       }
       for (int cnt=myNCurrentWalkers; cnt<myMaxNWalkers; cnt++){
          theWalkers[cnt] = NULL;
@@ -232,6 +238,8 @@ void MPSQMC::SetupWalkers(){
          walkerCoeffCopy[cnt] = 0.0;
          walkerOverlap[cnt] = 0.0;
          walkerOverlapCopy[cnt] = 0.0;
+         walkerEnergyHistorySum[cnt] = 0.0;
+         walkerEnergyHistorySumCopy[cnt] = 0.0;
       }
    
    }
@@ -242,11 +250,15 @@ void MPSQMC::Walk(const int steps){
 
    double projectedEnergy = EnergyFunction();
    if (MPIrank==0){
+      ofstream output("energies.txt",ios::trunc);
+      output << "#Step\t\tE_P\t\tE_T\t\tFluctMetric" << endl;
+      output.close();
+      
       cout << "Energy at start = " << projectedEnergy << endl;
       cout << "---------------------------------------------------------" << endl;
    }
 
-   for (int step=0; step<steps; step++){
+   for (int step=1; step<=steps; step++){
 
       //Propagate the walkers of each rank separately --> no MPI in that function
       double mySumOfWalkerCoeff = PropagateSeparately();
@@ -260,6 +272,9 @@ void MPSQMC::Walk(const int steps){
          double avgCoeff = mySumOfWalkerCoeff / totalNCurrentWalkers;
       #endif
       
+      //Update the energy history for each walker and return the fluctuation metric
+      double fluctMetric = updateEnergyHistory(step);
+      
       //Calculate the energy --> uses MPI
       projectedEnergy = EnergyFunction();
       
@@ -268,11 +283,13 @@ void MPSQMC::Walk(const int steps){
       double targetEnergy = log(scaling)/dtau;
       
       if (MPIrank==0){
-         cout << "  The current number of walkers is " << totalNCurrentWalkers << endl;
-         cout << "  The average walker coeff norm is " << avgCoeff << endl;
-         cout << "    Projected energy at step " << step << " is " << projectedEnergy << endl;
-         cout << "Target energy rescale @ step " << step << " is " << targetEnergy << endl;
-         write(projectedEnergy, targetEnergy);
+         cout << "        Step = " << step << endl;
+         cout << "   # walkers = " << totalNCurrentWalkers << endl;
+         cout << " avg(weight) = " << avgCoeff << endl;
+         cout << "         E_P = " << projectedEnergy << endl;
+         cout << "         E_T = " << targetEnergy << endl;
+         cout << "       Omega = " << fluctMetric << endl;
+         write(step, projectedEnergy, targetEnergy, fluctMetric);
          cout << "---------------------------------------------------------" << endl;
       }
       
@@ -351,6 +368,34 @@ double MPSQMC::PropagateSeparately(){
 
 }
 
+double MPSQMC::updateEnergyHistory(const int step){
+
+   double sumOfIndividualAvgEnergiesSquared = 0.0; //Per MPI rank
+   double sumOfIndividialAvgEnergies = 0.0; //Per MPI rank
+   
+   for (int walker=0; walker<myNCurrentWalkers; walker++){
+      double myCurrentEnergy = HPsi0[0]->InnerProduct(theWalkers[walker]) / walkerOverlap[walker];
+      walkerEnergyHistorySum[walker] += myCurrentEnergy; //EnergyHistory update
+      double myAvgEnergy = walkerEnergyHistorySum[walker] / step; // e_j(t) : individual time average energy
+      sumOfIndividialAvgEnergies += myAvgEnergy;
+      sumOfIndividualAvgEnergiesSquared += myAvgEnergy * myAvgEnergy;
+   }
+   
+   #ifdef USE_MPI_IN_MPSQMC
+      double allE = 0.0;
+      double allEsquared = 0.0;
+      MPI::COMM_WORLD.Allreduce(&sumOfIndividialAvgEnergies,        &allE,        1, MPI::DOUBLE, MPI::SUM);
+      MPI::COMM_WORLD.Allreduce(&sumOfIndividualAvgEnergiesSquared, &allEsquared, 1, MPI::DOUBLE, MPI::SUM);
+   #else
+      double allE = sumOfIndividialAvgEnergies;
+      double allEsquared = sumOfIndividualAvgEnergiesSquared;
+   #endif
+   
+   double fluctMetric = ( allEsquared - allE * allE / totalNCurrentWalkers ) / totalNCurrentWalkers;
+   return fluctMetric;
+
+}
+
 void MPSQMC::SeparatePopulationControl(const double scaling){
    
    int newNumberOfWalkers = 0;
@@ -368,10 +413,12 @@ void MPSQMC::SeparatePopulationControl(const double scaling){
          theWalkersCopyArray[newNumberOfWalkers] = theWalkers[walker];
          walkerOverlapCopy[newNumberOfWalkers] = walkerOverlap[walker];
          walkerCoeffCopy[newNumberOfWalkers] = newCoeff;
+         walkerEnergyHistorySumCopy[newNumberOfWalkers] = walkerEnergyHistorySum[walker];
          for (int cnt=1; cnt<nCopies; cnt++){
             theWalkersCopyArray[newNumberOfWalkers+cnt] = new MPSstate(theWalkers[walker]);
             walkerOverlapCopy[newNumberOfWalkers+cnt] = walkerOverlap[walker];
             walkerCoeffCopy[newNumberOfWalkers+cnt] = newCoeff;
+            walkerEnergyHistorySumCopy[newNumberOfWalkers+cnt] = walkerEnergyHistorySum[walker];
          }
          newNumberOfWalkers += nCopies;
       }
@@ -389,6 +436,10 @@ void MPSQMC::SeparatePopulationControl(const double scaling){
    double * tempCoeff = walkerCoeff;
    walkerCoeff = walkerCoeffCopy;
    walkerCoeffCopy = tempCoeff;
+   //Swap the energy history arrays
+   double * tempEnergyHistory = walkerEnergyHistorySum;
+   walkerEnergyHistorySum = walkerEnergyHistorySumCopy;
+   walkerEnergyHistorySumCopy = tempEnergyHistory;
 
 }
 
@@ -414,11 +465,11 @@ double MPSQMC::EnergyFunction(){
 
 }
 
-void MPSQMC::write(const double projectedEnergy, const double targetEnergy){
+void MPSQMC::write(const int step, const double projectedEnergy, const double targetEnergy, const double fluctMetric){
 
    ofstream output("energies.txt",ios::app);
    output.precision(10);
-   output << projectedEnergy << "\t\t" << targetEnergy << endl;
+   output << step << "\t\t" << projectedEnergy << "\t\t" << targetEnergy << "\t\t" << fluctMetric << endl;
    output.close();
 
 }

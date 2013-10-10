@@ -11,6 +11,8 @@ BINNAME = MPSQMC
 CPPSRC	= main.cpp\
            Random.cpp\
            Operator.cpp\
+           OpSx.cpp\
+           OpISy.cpp\
            OpSz.cpp\
            OpSup.cpp\
            OpSdown.cpp\

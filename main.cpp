@@ -25,11 +25,10 @@ int main(void){
    cout.precision(15);
    
    //MPOcheck();
-   //DMRGcheck();
+   DMRGcheck();
    //RNcheck();
    //MPSQMCcheck();
-   
-   HeisenbergSquareLattice();
+   //HeisenbergSquareLattice();
    
    #ifdef USE_MPI_IN_MPSQMC
       MPI::Finalize();
@@ -51,7 +50,8 @@ void HeisenbergSquareLattice(){
    int base = 4;
    int length = base*base;
    int d = 2;
-   HeisenbergMPO theMPO(length,d);
+   bool useLadder = false;
+   HeisenbergMPO theMPO(length,d,useLadder);
    for (int row=0; row<base; row++){
       for (int col=0; col<base; col++){
          int number = row + base * col;
@@ -96,7 +96,8 @@ void MPSQMCcheck(){
    /* The MPO */
    int length = 10;
    int d = 3;
-   HeisenbergMPO theMPO(length,d);
+   bool useLadder = false;
+   HeisenbergMPO theMPO(length,d,useLadder);
    for (int cnt=0; cnt<length-1; cnt++){ theMPO.sCoupling(cnt,cnt+1,1.0); }
    theMPO.sField(0.0);
    theMPO.findNonZeroContributions();
@@ -131,7 +132,8 @@ void DMRGcheck(){
    if (rank==0){
       int length = 10;
       int d = 3;
-      HeisenbergMPO theMPO(length,d);
+      bool useLadder = false;
+      HeisenbergMPO theMPO(length,d,useLadder);
       for (int cnt=0; cnt<length-1; cnt++){ theMPO.sCoupling(cnt,cnt+1,1.0); }
       theMPO.sField(0.0);
       theMPO.findNonZeroContributions();
@@ -162,35 +164,43 @@ void MPOcheck(){
    #endif
 
    if (rank==0){
-      int length = 6;
-      int d = 6;
-      HeisenbergMPO test(length,d);
-      double value = 1.0;
-      for (int cnt=0; cnt<length-1; cnt++){
-         for (int cnt2=cnt+1; cnt2<length; cnt2++){
-            value += 1.0;
-            test.sCoupling(cnt,cnt2,value);
+   
+      for (int geval=0; geval<2; geval++){
+         int length = 6;
+         int d = 6;
+         bool useLadder = (geval==0) ? true : false;
+         HeisenbergMPO test(length,d,useLadder);
+         double value = 1.0;
+         for (int cnt=0; cnt<length-1; cnt++){
+            for (int cnt2=cnt+1; cnt2<length; cnt2++){
+               value += 1.0;
+               test.sCoupling(cnt,cnt2,value);
+            }
          }
+         test.sField(1.0);
+         test.findNonZeroContributions();
+         cout << test;
       }
-      test.sField(1.0);
-      test.findNonZeroContributions();
-      cout << test;
       
       /*****/
       
-      int length2 = 7;
-      int d2 = 3;
-      HeisenbergMPO test2(length2,d2);
-      double value2 = 1.0;
-      for (int cnt=0; cnt<length2-1; cnt++){
-         for (int cnt2=cnt+1; cnt2<length2; cnt2++){
-            value2 += 1.0;
-            test2.sCoupling(cnt,cnt2,value2);
+      for (int geval=0; geval<2; geval++){
+         int length = 7;
+         int d = 3;
+         bool useLadder = (geval==0) ? true : false;
+         HeisenbergMPO test(length,d,useLadder);
+         double value = 1.0;
+         for (int cnt=0; cnt<length-1; cnt++){
+            for (int cnt2=cnt+1; cnt2<length; cnt2++){
+               value += 1.0;
+               test.sCoupling(cnt,cnt2,value);
+            }
          }
+         test.sField(-0.0);
+         test.findNonZeroContributions();
+         cout << test;
       }
-      test2.sField(-0.0);
-      test2.findNonZeroContributions();
-      cout << test2;
+      
    }
 
 }

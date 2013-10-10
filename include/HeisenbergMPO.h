@@ -7,6 +7,8 @@
 #include "MPO.h"
 #include "Op0.h"
 #include "OpI.h"
+#include "OpSx.h"
+#include "OpISy.h"
 #include "OpSz.h"
 #include "OpSup.h"
 #include "OpSdown.h"
@@ -20,7 +22,7 @@ class HeisenbergMPO : public MPO{
    public:
    
       //Constructor
-      HeisenbergMPO(const int length, const int phys_d);
+      HeisenbergMPO(const int length, const int phys_d, const bool useLadder);
       
       //Destructor
       ~HeisenbergMPO();
@@ -66,17 +68,26 @@ class HeisenbergMPO : public MPO{
       
    private:
    
+      //Whether to use ladder operators (S^+ S^- S^z) or the cartesian components (S^x i*S^y S^z)
+      bool useLadder;
+   
       //Value of zero
       double fZero;
       
       //Value of one
       double fOne;
-         
+      
       //Operator 0
       Op0 * opZero;
       
       //Operator I
       OpI * opOne;
+      
+      //Operator S^x
+      OpSx * opSx;
+      
+      //Operator i*S^y
+      OpISy * opISy;
       
       //Operator S^z
       OpSz * opSz;
@@ -92,9 +103,11 @@ class HeisenbergMPO : public MPO{
       
       //The coupling matrix --> Jij of [\sum_ij J_ij \vec{S}_i . \vec{S}_j]
       double * couplingMatrix;
+      double * minusCouplingMatrix;
       
       //Same as before, but now the pointer to where the variable is stored --> allows for later changes to have influence on the MPO
       double * gCouplingPointer(const int i, const int j);
+      double * gMinusCouplingPointer(const int i, const int j);
       
 };
 

@@ -5,21 +5,28 @@
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 29, 2013 */
 
-HeisenbergMPO::HeisenbergMPO(const int length, const int phys_d) : MPO(){
+HeisenbergMPO::HeisenbergMPO(const int length, const int phys_d, const bool useLadder) : MPO(){
 
    if (length < 3){ cerr << "HeisenbergMPO::HeisenbergMPO  :  The length must be at least three for the program to work." << endl; }
 
    this->length = length;
    this->phys_d = phys_d;
+   this->useLadder = useLadder;
    this->opZero   = new Op0(phys_d);
    this->opOne    = new OpI(phys_d);
    this->opSz     = new OpSz(phys_d);
-   this->opSplus  = new OpSup(phys_d);
-   this->opSminus = new OpSdown(phys_d);
+   if (useLadder){
+      this->opSplus  = new OpSup(phys_d);
+      this->opSminus = new OpSdown(phys_d);
+   } else {
+      this->opSx  = new OpSx(phys_d);
+      this->opISy = new OpISy(phys_d);
+   }
    
    MinusH = -0.0;
-   couplingMatrix = new double[(length * (length - 1))/2];
-   for (int count=0; count<(length * (length - 1))/2; count++){ couplingMatrix[count] = 0.0; }
+   couplingMatrix      = new double[(length * (length - 1))/2];
+   minusCouplingMatrix = new double[(length * (length - 1))/2];
+   for (int count=0; count<(length * (length - 1))/2; count++){ minusCouplingMatrix[count] = couplingMatrix[count] = 0.0; }
    
    fZero = 0.0;
    fOne = 1.0;
@@ -48,9 +55,15 @@ HeisenbergMPO::~HeisenbergMPO(){
    delete opZero;
    delete opOne;
    delete opSz;
-   delete opSplus;
-   delete opSminus;
+   if (useLadder){
+      delete opSplus;
+      delete opSminus;
+   } else {
+      delete opSx;
+      delete opISy;
+   }
    delete [] couplingMatrix;
+   delete [] minusCouplingMatrix;
    
    for (int site=0; site<length; site++){
       for (int row=0; row<dimL(site); row++){
@@ -91,9 +104,9 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
    MPOprefactors[0][0][0] = &MinusH;
    MPOoperators[0][0][0] = opSz;
    MPOprefactors[0][0][1] = &fOne;
-   MPOoperators[0][0][1] = opSplus;
+   MPOoperators[0][0][1] = (useLadder) ? (Operator *) opSplus : (Operator *) opSx;
    MPOprefactors[0][0][2] = &fOne;
-   MPOoperators[0][0][2] = opSminus;
+   MPOoperators[0][0][2] = (useLadder) ? (Operator *) opSminus : (Operator *) opISy;
    MPOprefactors[0][0][3] = &fOne;
    MPOoperators[0][0][3] = opSz;
    MPOprefactors[0][0][4] = &fOne;
@@ -102,9 +115,9 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
    MPOprefactors[length-1][0][0] = &fOne;
    MPOoperators[length-1][0][0] = opOne;
    MPOprefactors[length-1][1][0] = &fOne;
-   MPOoperators[length-1][1][0] = opSminus;
+   MPOoperators[length-1][1][0] = (useLadder) ? (Operator *) opSminus : (Operator *) opSx;
    MPOprefactors[length-1][2][0] = &fOne;
-   MPOoperators[length-1][2][0] = opSplus;
+   MPOoperators[length-1][2][0] = (useLadder) ? (Operator *) opSplus : (Operator *) opISy;
    MPOprefactors[length-1][3][0] = &fOne;
    MPOoperators[length-1][3][0] = opSz;
    MPOprefactors[length-1][4][0] = &MinusH;
@@ -126,19 +139,20 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
       MPOprefactors[site][dimL(site)-1][0] = &MinusH;
       MPOoperators[site][dimL(site)-1][0] = opSz;
       MPOprefactors[site][dimL(site)-1][dimL(site)-1] = &fOne;
-      MPOoperators[site][dimL(site)-1][dimL(site)-1] = opSplus;
+      MPOoperators[site][dimL(site)-1][dimL(site)-1] = (useLadder) ? (Operator *) opSplus : (Operator *) opSx;
       MPOprefactors[site][dimL(site)-1][dimL(site)] = &fOne;
-      MPOoperators[site][dimL(site)-1][dimL(site)] = opSminus;
+      MPOoperators[site][dimL(site)-1][dimL(site)] = (useLadder) ? (Operator *) opSminus : (Operator *) opISy;
       MPOprefactors[site][dimL(site)-1][dimL(site)+1] = &fOne;
       MPOoperators[site][dimL(site)-1][dimL(site)+1] = opSz;
       MPOprefactors[site][dimL(site)-1][dimL(site)+2] = &fOne;
       MPOoperators[site][dimL(site)-1][dimL(site)+2] = opOne;
       for (int row=0; row<site; row++){
-         MPOprefactors[site][1 + 3*row + 0][0] = gCouplingPointer(row,site);
-         MPOoperators[site][ 1 + 3*row + 0][0] = opSminus;
-         MPOprefactors[site][1 + 3*row + 1][0] = gCouplingPointer(row,site);
-         MPOoperators[site][ 1 + 3*row + 1][0] = opSplus;
-         MPOprefactors[site][1 + 3*row + 2][0] = gCouplingPointer(row,site);
+         double * value = gCouplingPointer(row,site);
+         MPOprefactors[site][1 + 3*row + 0][0] = value;
+         MPOoperators[site][ 1 + 3*row + 0][0] = (useLadder) ? (Operator *) opSminus : (Operator *) opSx;
+         MPOprefactors[site][1 + 3*row + 1][0] = (useLadder) ? value : gMinusCouplingPointer(row,site);
+         MPOoperators[site][ 1 + 3*row + 1][0] = (useLadder) ? (Operator *) opSplus : (Operator *) opISy;
+         MPOprefactors[site][1 + 3*row + 2][0] = value;
          MPOoperators[site][ 1 + 3*row + 2][0] = opSz;
       }
    
@@ -158,25 +172,28 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
       MPOprefactors[locSwitch][dimL(locSwitch)-1][0] = &MinusH;
       MPOoperators[ locSwitch][dimL(locSwitch)-1][0] = opSz;
       for (int row=0; row<locSwitch; row++){
-         MPOprefactors[locSwitch][1 + 3*row + 0][0] = gCouplingPointer(row,locSwitch);
-         MPOoperators[ locSwitch][1 + 3*row + 0][0] = opSminus;
-         MPOprefactors[locSwitch][1 + 3*row + 1][0] = gCouplingPointer(row,locSwitch);
-         MPOoperators[ locSwitch][1 + 3*row + 1][0] = opSplus;
-         MPOprefactors[locSwitch][1 + 3*row + 2][0] = gCouplingPointer(row,locSwitch);
+         double * value = gCouplingPointer(row,locSwitch);
+         MPOprefactors[locSwitch][1 + 3*row + 0][0] = value;
+         MPOoperators[ locSwitch][1 + 3*row + 0][0] = (useLadder) ? (Operator *) opSminus : (Operator *) opSx;
+         MPOprefactors[locSwitch][1 + 3*row + 1][0] = (useLadder) ? value : gMinusCouplingPointer(row,locSwitch);
+         MPOoperators[ locSwitch][1 + 3*row + 1][0] = (useLadder) ? (Operator *) opSplus : (Operator *) opISy;
+         MPOprefactors[locSwitch][1 + 3*row + 2][0] = value;
          MPOoperators[ locSwitch][1 + 3*row + 2][0] = opSz;
          for (int col=0; col<length-1-locSwitch; col++){
+            value = gCouplingPointer(row,locSwitch+1+col);
             for (int cnt=0; cnt<3; cnt++){
-               MPOprefactors[locSwitch][1 + 3*row + cnt][1 + 3*col + cnt] = gCouplingPointer(row,locSwitch+1+col);
+               MPOprefactors[locSwitch][1 + 3*row + cnt][1 + 3*col + cnt] = (useLadder) ? value : ((cnt==1) ? gMinusCouplingPointer(row,locSwitch+1+col) : value);
                MPOoperators[ locSwitch][1 + 3*row + cnt][1 + 3*col + cnt] = opOne;
             }
          }
       }
       for (int col=0; col<length-1-locSwitch; col++){
-         MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 0] = gCouplingPointer(locSwitch,locSwitch+1+col);
-         MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 0] = opSplus;
-         MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 1] = gCouplingPointer(locSwitch,locSwitch+1+col);
-         MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 1] = opSminus;
-         MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 2] = gCouplingPointer(locSwitch,locSwitch+1+col);
+         double * value = gCouplingPointer(locSwitch,locSwitch+1+col);
+         MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 0] = value;
+         MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 0] = (useLadder) ? (Operator *) opSplus : (Operator *) opSx;
+         MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 1] = (useLadder) ? value : gMinusCouplingPointer(locSwitch,locSwitch+1+col);
+         MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 1] = (useLadder) ? (Operator *) opSminus : (Operator *) opISy;
+         MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 2] = value;
          MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 2] = opSz;
       }
       MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*(length-1-locSwitch) + 0] = &fOne;
@@ -198,9 +215,9 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
       MPOprefactors[site][dimL(site)-1][0] = &MinusH;
       MPOoperators[site][dimL(site)-1][0] = opSz;
       MPOprefactors[site][1][0] = &fOne;
-      MPOoperators[ site][1][0] = opSminus;
+      MPOoperators[ site][1][0] = (useLadder) ? (Operator *) opSminus : (Operator *) opSx;
       MPOprefactors[site][2][0] = &fOne;
-      MPOoperators[ site][2][0] = opSplus;
+      MPOoperators[ site][2][0] = (useLadder) ? (Operator *) opSplus : (Operator *) opISy;
       MPOprefactors[site][3][0] = &fOne;
       MPOoperators[ site][3][0] = opSz;
       for (int col=1; col<dimR(site); col++){
@@ -208,11 +225,12 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
          MPOoperators[ site][3 + col][col] = opOne;
       }
       for (int col=0; col<length-1-site; col++){
-         MPOprefactors[site][dimL(site)-1][1 + 3*col + 0] = gCouplingPointer(site,site+1+col);
-         MPOoperators[ site][dimL(site)-1][1 + 3*col + 0] = opSplus;
-         MPOprefactors[site][dimL(site)-1][1 + 3*col + 1] = gCouplingPointer(site,site+1+col);
-         MPOoperators[ site][dimL(site)-1][1 + 3*col + 1] = opSminus;
-         MPOprefactors[site][dimL(site)-1][1 + 3*col + 2] = gCouplingPointer(site,site+1+col);
+         double * value = gCouplingPointer(site,site+1+col);
+         MPOprefactors[site][dimL(site)-1][1 + 3*col + 0] = value;
+         MPOoperators[ site][dimL(site)-1][1 + 3*col + 0] = (useLadder) ? (Operator *) opSplus : (Operator *) opSx;
+         MPOprefactors[site][dimL(site)-1][1 + 3*col + 1] = (useLadder) ? value : gMinusCouplingPointer(site,site+1+col);
+         MPOoperators[ site][dimL(site)-1][1 + 3*col + 1] = (useLadder) ? (Operator *) opSminus : (Operator *) opISy;
+         MPOprefactors[site][dimL(site)-1][1 + 3*col + 2] = value;
          MPOoperators[ site][dimL(site)-1][1 + 3*col + 2] = opSz;
       }
    
@@ -232,9 +250,11 @@ void HeisenbergMPO::sCoupling(const int i, const int j, const double value){
    }
    
    if (i<j){
-      couplingMatrix[ (j*(j-1))/2 + i ] = value;
+      couplingMatrix[ (j*(j-1))/2 + i ]      = value;
+      minusCouplingMatrix[ (j*(j-1))/2 + i ] = -value;
    } else {
-      couplingMatrix[ (i*(i-1))/2 + j ] = value;
+      couplingMatrix[ (i*(i-1))/2 + j ]      = value;
+      minusCouplingMatrix[ (i*(i-1))/2 + j ] = -value;
    }
 
 }
@@ -254,12 +274,24 @@ double HeisenbergMPO::gCoupling(const int i, const int j) const{
 double * HeisenbergMPO::gCouplingPointer(const int i, const int j){
 
    if ((i==j) || (i<0) || (i>=length) || (j<0) || (j>=length)) {
-      cerr << "HeisenbergMPO::gCoupling  :  The combination of indices (" << i << "," << j << ") is not OK." << endl;
+      cerr << "HeisenbergMPO::gCouplingPointer  :  The combination of indices (" << i << "," << j << ") is not OK." << endl;
       return NULL;
    }
    
    if (i<j){ return couplingMatrix + (j*(j-1))/2 + i; }
    return couplingMatrix + (i*(i-1))/2 + j;
+
+}
+
+double * HeisenbergMPO::gMinusCouplingPointer(const int i, const int j){
+
+   if ((i==j) || (i<0) || (i>=length) || (j<0) || (j>=length)) {
+      cerr << "HeisenbergMPO::gMinusCouplingPointer  :  The combination of indices (" << i << "," << j << ") is not OK." << endl;
+      return NULL;
+   }
+   
+   if (i<j){ return minusCouplingMatrix + (j*(j-1))/2 + i; }
+   return minusCouplingMatrix + (i*(i-1))/2 + j;
 
 }
 
@@ -293,18 +325,28 @@ void HeisenbergMPO::printOperators(ostream& os) const{
    os << *opZero;
    os << *opOne;
    os << *opSz;
-   os << *opSplus;
-   os << *opSminus;
+   if (useLadder){
+      os << *opSplus;
+      os << *opSminus;
+   } else {
+      os << *opSx;
+      os << *opISy;
+   }
 
 }
 
 void HeisenbergMPO::printOperatorTag(ostream& os, Operator * theOp) const{
 
-   if (theOp == opZero){   os << "--"; }
-   if (theOp == opOne){    os << "I "; }
-   if (theOp == opSz){     os << "Sz";  }
-   if (theOp == opSplus){  os << "S+"; }
-   if (theOp == opSminus){ os << "S-"; }
+   if (theOp == opZero){   os << "---"; }
+   if (theOp == opOne){    os << "I  "; }
+   if (theOp == opSz){     os << "Sz ";  }
+   if (useLadder){
+      if (theOp == opSplus){  os << "S+ "; }
+      if (theOp == opSminus){ os << "S- "; }
+   } else {
+      if (theOp == opSx){  os << "Sx "; }
+      if (theOp == opISy){ os << "iSy"; }
+   }
 
 }
 
@@ -332,9 +374,11 @@ ostream& operator<<(ostream& os, const HeisenbergMPO& theMPO){
    for (int site=0; site<theMPO.gLength(); site++){
       os << "MPO at site " << site << " is :" << endl;
       for (int row=0; row<theMPO.dimL(site); row++){
-         os << "\t\t";
+         os << "\t";
          for (int col=0; col<theMPO.dimR(site); col++){
-            os << "(" << theMPO.gPrefactor(site,row,col) << ";";
+            double value = theMPO.gPrefactor(site,row,col);
+            if (value>=0.0){ os << "( " << value << ";"; }
+            else { os << "(" << value << ";"; }
             theMPO.printOperatorTag(os, theMPO.gOperator(site,row,col));
             os << ")\t";
          }
@@ -346,7 +390,9 @@ ostream& operator<<(ostream& os, const HeisenbergMPO& theMPO){
    if (theMPO.gRN_nTerms()>0){
       os << "The MPO non-zero contributions :" << endl;
       for (int count=0; count<theMPO.gRN_nTerms(); count++){
-         os << "\t\tTerm " << count << "\t f = " << theMPO.gRN_prefactor(count) << "\t\t";
+         double value = theMPO.gRN_prefactor(count);
+         if (value>=0.0){ os << "\t\tTerm " << count << "\t f =  " << value << "\t\t"; }
+         else { os << "\t\tTerm " << count << "\t f = " << value << "\t\t"; }
          for (int site=0; site<theMPO.gLength(); site++){
             theMPO.printOperatorTag(os, theMPO.gRN_operator(count,site));
             os << " ";
@@ -473,14 +519,21 @@ void HeisenbergMPO::findNonZeroContributions(){
             for (int col=row+1; col<length; col++){
                double value = gCoupling(row,col);
                if (value != 0.0){
-                  RN_operators[theCurrentTerm  ][row] = opSplus;
-                  RN_operators[theCurrentTerm  ][col] = opSminus;
-                  RN_operators[theCurrentTerm+1][row] = opSminus;
-                  RN_operators[theCurrentTerm+1][col] = opSplus;
+                  if (useLadder){
+                     RN_operators[theCurrentTerm  ][row] = opSplus;
+                     RN_operators[theCurrentTerm  ][col] = opSminus;
+                     RN_operators[theCurrentTerm+1][row] = opSminus;
+                     RN_operators[theCurrentTerm+1][col] = opSplus;
+                  } else {
+                     RN_operators[theCurrentTerm  ][row] = opSx;
+                     RN_operators[theCurrentTerm  ][col] = opSx;
+                     RN_operators[theCurrentTerm+1][row] = opISy;
+                     RN_operators[theCurrentTerm+1][col] = opISy;
+                  }
                   RN_operators[theCurrentTerm+2][row] = opSz;
                   RN_operators[theCurrentTerm+2][col] = opSz;
                   RN_prefactors[theCurrentTerm  ] = value;
-                  RN_prefactors[theCurrentTerm+1] = value;
+                  RN_prefactors[theCurrentTerm+1] = ((useLadder) ? 1 : -1) * value;
                   RN_prefactors[theCurrentTerm+2] = value;
                   theCurrentTerm += 3;
                }
@@ -499,51 +552,55 @@ void HeisenbergMPO::findNonZeroContributions(){
    }
    
    //Then find the HC friends
-   Operator ** whatItShouldBe = new Operator*[length];
-   for (int index=0; index<RN_nTerms; index++){
-      if (RN_HCfriends[index] == -1){
-   
-         //Find what the HC looks like
-         bool isDifferent = false;
-         for (int site=0; site<length; site++){
-            whatItShouldBe[site] = RN_operators[index][site];
-            if (whatItShouldBe[site] == opSplus){
-               whatItShouldBe[site] = opSminus;
-               isDifferent = true;
-            } else{
-               if (whatItShouldBe[site] == opSminus){
-                  whatItShouldBe[site] = opSplus;
+   if (useLadder){
+      Operator ** whatItShouldBe = new Operator*[length];
+      for (int index=0; index<RN_nTerms; index++){
+         if (RN_HCfriends[index] == -1){
+      
+            //Find what the HC looks like
+            bool isDifferent = false;
+            for (int site=0; site<length; site++){
+               whatItShouldBe[site] = RN_operators[index][site];
+               if (whatItShouldBe[site] == opSplus){
+                  whatItShouldBe[site] = opSminus;
                   isDifferent = true;
+               } else{
+                  if (whatItShouldBe[site] == opSminus){
+                     whatItShouldBe[site] = opSplus;
+                     isDifferent = true;
+                  }
                }
             }
-         }
-         
-         //Find the HC
-         if (isDifferent==false){
-            RN_HCfriends[index] = index;
-         } else {
-            const double desiredPrefactor = RN_prefactors[index];
-            for (int index2=index+1; index2<RN_nTerms; index2++){
-               if (desiredPrefactor == RN_prefactors[index2]){
-                  bool allTheSame = true;
-                  for (int site=0; site<length; site++){
-                     if (whatItShouldBe[site] != RN_operators[index2][site]){
-                        allTheSame = false;
-                        site = length;
+            
+            //Find the HC
+            if (isDifferent==false){
+               RN_HCfriends[index] = index;
+            } else {
+               const double desiredPrefactor = RN_prefactors[index];
+               for (int index2=index+1; index2<RN_nTerms; index2++){
+                  if (desiredPrefactor == RN_prefactors[index2]){
+                     bool allTheSame = true;
+                     for (int site=0; site<length; site++){
+                        if (whatItShouldBe[site] != RN_operators[index2][site]){
+                           allTheSame = false;
+                           site = length;
+                        }
+                     }
+                     if (allTheSame){
+                        RN_HCfriends[index] = index2;
+                        RN_HCfriends[index2] = index;
+                        index2 = RN_nTerms;
                      }
                   }
-                  if (allTheSame){
-                     RN_HCfriends[index] = index2;
-                     RN_HCfriends[index2] = index;
-                     index2 = RN_nTerms;
-                  }
                }
             }
+            
          }
-         
       }
+      delete [] whatItShouldBe;
+   } else {
+      for (int index=0; index<RN_nTerms; index++){ RN_HCfriends[index] = index; }
    }
-   delete [] whatItShouldBe;
 
 }
 

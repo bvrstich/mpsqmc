@@ -295,16 +295,6 @@ double * HeisenbergMPO::gMinusCouplingPointer(const int i, const int j){
 
 }
 
-int HeisenbergMPO::gNnonzeroPairs() const{
-
-   int number = 0;
-   for (int count=0; count<(length*(length-1))/2; count++){
-      if (couplingMatrix[count] != 0.0){ number++; }
-   }
-   return number;
-
-}
-
 double HeisenbergMPO::gPrefactor(const int site, const int row, const int col) const{
 
    if ((site<0) || (site>=length) || (row<0) || (row>=dimL(site)) || (col<0) || (col>=dimR(site))){ return 0.0; }

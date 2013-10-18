@@ -203,6 +203,8 @@ MPSstate * MPSQMC::BroadcastCopyConstruct(MPSstate * pointer){
 
 void MPSQMC::SetupWalkers(){
 
+   const bool copyTrial = true;
+
    if (!bSetupWalkers){
    
       bSetupWalkers = true;
@@ -222,7 +224,11 @@ void MPSQMC::SetupWalkers(){
       sumWalkerCoeffPerThread = new double[myNOpenMPthreads];
       
       for (int cnt=0; cnt<myNCurrentWalkers; cnt++){
-         theWalkers[cnt] = new MPSstate(Psi0[0]);
+         if (copyTrial){
+            theWalkers[cnt] = new MPSstate(Psi0[0]);
+         } else {
+            theWalkers[cnt] = new MPSstate(theMPO->gLength(), Dtrunc, theMPO->gPhys_d(), RN);
+         }
          theWalkersCopyArray[cnt] = NULL;
          walkerCoeff[cnt] = 1.0;
          walkerCoeffCopy[cnt] = 0.0;

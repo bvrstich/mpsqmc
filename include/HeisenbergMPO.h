@@ -39,9 +39,6 @@ class HeisenbergMPO : public MPO{
       //Get the operator for a specific MPO term
       Operator * gOperator(const int site, const int row, const int col) const;
       
-      //Get the number of non-zero pairs
-      int gNnonzeroPairs() const;
-      
       //Get the coupling between spin i and j
       double gCoupling(const int i, const int j) const;
       

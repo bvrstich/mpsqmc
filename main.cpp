@@ -5,8 +5,10 @@
 #include "HeisenbergMPO.h"
 #include "MPSstate.h"
 #include "DMRG.h"
-#include "MPSQMC.h"
+#include "MPSQMC2.h"
 #include "Random.h"
+#include "TrotterHeisenberg.h"
+#include "GridGenerator.h"
 
 using namespace std;
 
@@ -73,43 +75,54 @@ void HeisenbergSquareLattice(){
    /* DMRG calculations */
    const bool doDMRG = true;
    if ((rank==0) && (doDMRG)){
-      int D = 2;
+      int D = 10;
       MPSstate Psi0(length, D, d, &RN);
       DMRG theSolver(&Psi0, &theMPO);
       double Energy = theSolver.Solve();
       cout << "The energy from DMRG = " << Energy << endl; //J=1 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
    }
    
+   /*GridGenerator theGrid(4);
+   theGrid.FillMarsaglia(4);*/
+   
    /* The MPSQMC */
    /*int Dtrunc = 2;
    int Nwalkers = 1000;
    double dtau = 0.01;
-   int nSteps = 1058576; //2^{20} + 10000
-   MPSQMC thePopulation(&theMPO, &RN, Dtrunc, Nwalkers, dtau);
+   int nSteps = 10000;
+   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);
    thePopulation.Walk(nSteps);*/
 
 }
 
 void MPSQMCcheck(){
 
-   //Should work both with and without MPI
-   
-   /* The MPO */
    int length = 10;
-   int d = 3;
+   int d = 2;
    bool useLadder = false;
    HeisenbergMPO theMPO(length,d,useLadder);
    for (int cnt=0; cnt<length-1; cnt++){ theMPO.sCoupling(cnt,cnt+1,1.0); }
    theMPO.sField(0.0);
    theMPO.findNonZeroContributions();
    
-   /* The MPSQMC */
-   int Dtrunc = 2;
-   int Nwalkers = 100;
-   double dtau = 0.01;
-   int nSteps = 10;
    Random RN;
-   MPSQMC thePopulation(&theMPO, &RN, Dtrunc, Nwalkers, dtau);
+   
+   if (false){
+      int D = 2*2*2*2*2;
+      MPSstate Psi0(length, D, d, &RN);
+      DMRG theSolver(&Psi0, &theMPO);
+      double Energy = theSolver.Solve();
+      cout << "The energy from DMRG = " << Energy << endl; //E("FCI") = -4.25803520728288
+   }
+   
+   GridGenerator theGrid(4);
+   theGrid.FillSimple(4);
+
+   int Dtrunc = 2;
+   int Nwalkers = 1000;
+   double dtau = 0.01;
+   int nSteps = 10000;
+   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
 
 }

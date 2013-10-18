@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 #   Sources for all modules
 # -----------------------------------------------------------------------------
-BINNAME = MPSQMC
+BINNAME = MPSQMC2
 CPPSRC	= main.cpp\
            Random.cpp\
            Operator.cpp\
@@ -24,7 +24,11 @@ CPPSRC	= main.cpp\
            TwoSiteObject.cpp\
            MPSstate.cpp\
            DMRG.cpp\
-           MPSQMC.cpp
+           MPSQMC.cpp\
+           Walker.cpp\
+           TrotterHeisenberg.cpp\
+           GridGenerator.cpp\
+           MPSQMC2.cpp
 
 OBJ	= $(CPPSRC:.cpp=.o)
 

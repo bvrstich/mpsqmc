@@ -4,6 +4,8 @@
 #include "MPStensor.h"
 #include "MPO.h"
 #include "TwoSiteObject.h"
+#include "TrotterHeisenberg.h"
+#include "GridGenerator.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 9, 2013 */
 
@@ -73,6 +75,15 @@ class MPSstate{
       
       //Apply the hermitian conjugate of a specific non-zero term of the MPO to this wfn
       void ApplyMPOtermHC(MPO * theMPO, const int SelectedTerm){ ApplyMPOterm(theMPO, theMPO->gRN_HCfriend(SelectedTerm)); }
+      
+      //Apply a particular two-site Trotter term
+      void ApplyTwoSiteTrotterTerm(TrotterHeisenberg * theTrotter, const int firstSite, const int secondSite, const int leftSVDindex, const int rightSVDindex, const bool doHC = false);
+      
+      //Apply a particular two-site Trotter term
+      void ApplyTwoSiteTrotterTerm(TrotterHeisenberg * theTrotter, const int firstSite, const int secondSite, GridGenerator * theGrid, const int gridPoint);
+      
+      //Apply the single-site Trotter term on each site
+      void ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter);
       
       //Check whether the work arrays are allocated with at least size size
       void checkWork1(const int size);

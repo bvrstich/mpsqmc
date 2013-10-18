@@ -440,6 +440,131 @@ void MPSstate::ApplyMPOterm(MPO * theMPO, const int SelectedTerm){
 
 }
 
+void MPSstate::ApplyTwoSiteTrotterTerm(TrotterHeisenberg * theTrotter, const int firstSite, const int secondSite, const int leftSVDindex, const int rightSVDindex, const bool doHC){
+
+   const double coupling = theTrotter->gCoupling(firstSite, secondSite);
+   
+   {
+      //First Site
+      int sizeBlock = VirtualD[firstSite] * VirtualD[firstSite+1];
+      int size = sizeBlock * phys_d;
+      checkWork1(size);
+      double SingularValueSqrt = sqrt( theTrotter->gTwoSitePropSVD_Sing(coupling, leftSVDindex) );
+      for (int cnt=0; cnt<size; cnt++){ work1[cnt] = 0.0; }
+      for (int phys_up=0; phys_up<phys_d; phys_up++){
+         for (int phys_down=0; phys_down<phys_d; phys_down++){
+            double OperatorValue = SingularValueSqrt * theTrotter->gTwoSitePropSVD_Left(coupling, leftSVDindex, (doHC)?phys_down:phys_up, (doHC)?phys_up:phys_down);
+            if (OperatorValue!=0.0){
+               int inc = 1;
+               daxpy_(&sizeBlock, &OperatorValue, theTensors[firstSite]->gStorage(phys_down), &inc, work1 + phys_up*sizeBlock, &inc);
+            }
+         }
+      }
+      int inc = 1;
+      dcopy_(&size, work1, &inc, theTensors[firstSite]->gStorage(), &inc);
+   }
+   
+   {
+      //Second Site
+      int sizeBlock = VirtualD[secondSite] * VirtualD[secondSite+1];
+      int size = sizeBlock * phys_d;
+      checkWork1(size);
+      double SingularValueSqrt = sqrt( theTrotter->gTwoSitePropSVD_Sing(coupling, rightSVDindex) );
+      for (int cnt=0; cnt<size; cnt++){ work1[cnt] = 0.0; }
+      for (int phys_up=0; phys_up<phys_d; phys_up++){
+         for (int phys_down=0; phys_down<phys_d; phys_down++){
+            double OperatorValue = SingularValueSqrt * theTrotter->gTwoSitePropSVD_Right(coupling, rightSVDindex, (doHC)?phys_down:phys_up, (doHC)?phys_up:phys_down);
+            if (OperatorValue!=0.0){
+               int inc = 1;
+               daxpy_(&sizeBlock, &OperatorValue, theTensors[secondSite]->gStorage(phys_down), &inc, work1 + phys_up*sizeBlock, &inc);
+            }
+         }
+      }
+      int inc = 1;
+      dcopy_(&size, work1, &inc, theTensors[secondSite]->gStorage(), &inc);
+   }
+
+}
+
+void MPSstate::ApplyTwoSiteTrotterTerm(TrotterHeisenberg * theTrotter, const int firstSite, const int secondSite, GridGenerator * theGrid, const int gridPoint){
+
+   const double coupling = theTrotter->gCoupling(firstSite, secondSite);
+   
+   {
+      //First Site
+      int sizeBlock = VirtualD[firstSite] * VirtualD[firstSite+1];
+      int size = sizeBlock * phys_d;
+      checkWork1(size);
+      for (int cnt=0; cnt<size; cnt++){ work1[cnt] = 0.0; }
+      for (int SVDindex=0; SVDindex<theGrid->gDim(); SVDindex++){
+         const double prefactor = sqrt( theTrotter->gTwoSitePropSVD_Sing(coupling, SVDindex) * theGrid->gDim() ) * theGrid->gCoOfPoint(gridPoint, SVDindex);
+         if (prefactor!=0.0){
+            for (int phys_up=0; phys_up<phys_d; phys_up++){
+               for (int phys_down=0; phys_down<phys_d; phys_down++){
+                  double OperatorValue = prefactor * theTrotter->gTwoSitePropSVD_Left(coupling, SVDindex, phys_up, phys_down);
+                  if (OperatorValue!=0.0){
+                     int inc = 1;
+                     daxpy_(&sizeBlock, &OperatorValue, theTensors[firstSite]->gStorage(phys_down), &inc, work1 + phys_up*sizeBlock, &inc);
+                  }
+               }
+            }
+         }
+      }
+      int inc = 1;
+      dcopy_(&size, work1, &inc, theTensors[firstSite]->gStorage(), &inc);
+   }
+   
+   {
+      //Second Site
+      int sizeBlock = VirtualD[secondSite] * VirtualD[secondSite+1];
+      int size = sizeBlock * phys_d;
+      checkWork1(size);
+      for (int cnt=0; cnt<size; cnt++){ work1[cnt] = 0.0; }
+      for (int SVDindex=0; SVDindex<theGrid->gDim(); SVDindex++){
+         const double prefactor = sqrt( theTrotter->gTwoSitePropSVD_Sing(coupling, SVDindex) * theGrid->gDim() ) * theGrid->gCoOfPoint(gridPoint, SVDindex);
+         if (prefactor!=0.0){
+            for (int phys_up=0; phys_up<phys_d; phys_up++){
+               for (int phys_down=0; phys_down<phys_d; phys_down++){
+                  double OperatorValue = prefactor * theTrotter->gTwoSitePropSVD_Right(coupling, SVDindex, phys_up, phys_down);
+                  if (OperatorValue!=0.0){
+                     int inc = 1;
+                     daxpy_(&sizeBlock, &OperatorValue, theTensors[secondSite]->gStorage(phys_down), &inc, work1 + phys_up*sizeBlock, &inc);
+                  }
+               }
+            }
+         }
+      }
+      int inc = 1;
+      dcopy_(&size, work1, &inc, theTensors[secondSite]->gStorage(), &inc);
+   }
+
+}
+
+void MPSstate::ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter){
+
+   if (theTrotter->gIsMagneticField()){
+      for (int site=0; site<length; site++){
+      
+         int sizeBlock = VirtualD[site] * VirtualD[site+1];
+         int size = sizeBlock * phys_d;
+         checkWork1(size);
+         for (int cnt=0; cnt<size; cnt++){ work1[cnt] = 0.0; }
+         for (int phys_up=0; phys_up<phys_d; phys_up++){
+            for (int phys_down=0; phys_down<phys_d; phys_down++){
+               double OperatorValue = theTrotter->gSingleSiteProp( phys_up, phys_down);
+               if (OperatorValue!=0.0){
+                  int inc = 1;
+                  daxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, work1 + phys_up*sizeBlock, &inc);
+               }
+            }
+         }
+         int inc = 1;
+         dcopy_(&size, work1, &inc, theTensors[site]->gStorage(), &inc);
+      
+      }
+   }
+
+}
 
 
 

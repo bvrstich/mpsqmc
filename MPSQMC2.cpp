@@ -14,7 +14,12 @@
 using namespace std;
 
 /**
- *
+ * constructor of the MPSQMC2 object, takes input parameters that define the QMC walk.
+ * @param theMPO MPO containing relevant matrix elements, defines system being studied
+ * @param theGrid Generates a grid for the random picking of terms from the two-site trotter MPO's
+ * @param Dtrunc dimension of the trialstate and the walkers
+ * @param Nwalkers number of Walker states
+ * @param dtau time step of each evolution
  */
 MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int Dtrunc, const int Nwalkers, const double dtau){
 
@@ -48,8 +53,6 @@ void MPSQMC2::SetupOMPandMPILoadDistribution(){
 
    //Find out about the COMM WORLD, and set the walker distribution over the processes
 #ifdef USE_MPI_IN_MPSQMC
-
-   cout << "Am I here?" << endl;
    MPIsize = MPI::COMM_WORLD.Get_size();
    MPIrank = MPI::COMM_WORLD.Get_rank();
 
@@ -133,45 +136,73 @@ MPSQMC2::~MPSQMC2(){
 
 }
 
+/**
+ * construct the trial wavefunction by performing a DMRG calculation
+ */
 void MPSQMC2::SetupTrial(){
 
    //Rank 0 does the DMRG optimization, and the solution gets copied so every thread on every rank has 1 copy.
-   Psi0 = new MPSstate*[NThreadsPerRank[MPIrank]];
+   Psi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
+
    if (MPIrank==0){
+
+      //create initial MPS guess
       Psi0[0] = new MPSstate(theMPO->gLength(),Dtrunc,theMPO->gPhys_d(),RN);
+
+      //find optimal MPS for specific MPO using DMRG algorithm
       DMRG * solver = new DMRG(Psi0[0],theMPO);
+
       solver->Solve();
+
       delete solver;
+
       Psi0[0]->LeftNormalize();
+
    }
+
 #ifdef USE_MPI_IN_MPSQMC
    Psi0[0] = BroadcastCopyConstruct(Psi0[0]);
 #endif
-   for (int cnt=1; cnt<NThreadsPerRank[MPIrank]; cnt++){ Psi0[cnt] = new MPSstate(Psi0[0]); }
+
+   for(int cnt = 1;cnt < NThreadsPerRank[MPIrank];cnt++)
+      Psi0[cnt] = new MPSstate(Psi0[0]);
 
    //Rank 0 calculates MPO times trial, and the result gets copied so every thread on every rank has 1 copy.
-   HPsi0 = new MPSstate*[NThreadsPerRank[MPIrank]];
-   if (MPIrank==0){
+   HPsi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
+
+   if(MPIrank==0){
+
       HPsi0[0] = new MPSstate(theMPO->gLength(),Dtrunc,theMPO->gPhys_d(),RN);
       HPsi0[0]->ApplyMPO(theMPO, Psi0[0]);
       HPsi0[0]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+
    }
+
 #ifdef USE_MPI_IN_MPSQMC
    HPsi0[0] = BroadcastCopyConstruct(HPsi0[0]);
 #endif
-   for (int cnt=1; cnt<NThreadsPerRank[MPIrank]; cnt++){ HPsi0[cnt] = new MPSstate(HPsi0[0]); }
+
+   for(int cnt=1; cnt<NThreadsPerRank[MPIrank];cnt++)
+      HPsi0[cnt] = new MPSstate(HPsi0[0]);
 
    //Find the number and the indices of the non-zero couplings, as well as the Trotter SVD size
    nCouplings = 0;
-   for (int first=0; first<theMPO->gLength()-1; first++){
+
+   for (int first=0; first<theMPO->gLength()-1; first++)
       for (int second=first+1; second<theMPO->gLength(); second++){
+
          double coupling = theTrotter->gCoupling(first,second);
-         if (coupling!=0.0){ nCouplings++; }
+
+         if (coupling != 0.0)
+            nCouplings++;
+
       }
-   }
+
    firstIndexCoupling  = new int[nCouplings];
    secondIndexCoupling = new int[nCouplings];
+
    nCouplings = 0;
+
    for (int first=0; first<theMPO->gLength()-1; first++){
       for (int second=first+1; second<theMPO->gLength(); second++){
          double coupling = theTrotter->gCoupling(first,second);

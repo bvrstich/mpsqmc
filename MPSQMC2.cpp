@@ -28,6 +28,7 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
    this->RN = RN;
    this->Dtrunc = Dtrunc;
    this->dtau = dtau;
+
    this->theTrotter = new TrotterHeisenberg(theMPO,dtau);
 
    this->totalNDesiredWalkers = Nwalkers;
@@ -182,7 +183,7 @@ void MPSQMC2::SetupTrial(){
    HPsi0[0] = BroadcastCopyConstruct(HPsi0[0]);
 #endif
 
-   for(int cnt=1; cnt<NThreadsPerRank[MPIrank];cnt++)
+   for(int cnt = 1;cnt < NThreadsPerRank[MPIrank];cnt++)
       HPsi0[cnt] = new MPSstate(HPsi0[0]);
 
    //Find the number and the indices of the non-zero couplings, as well as the Trotter SVD size
@@ -213,6 +214,7 @@ void MPSQMC2::SetupTrial(){
          }
       }
    }
+
    trotterSVDsize = theMPO->gPhys_d() * theMPO->gPhys_d();
 
    //Multiply for all possible combinations of the SVD decomposition of the two-site Trotter terms, its hermitian conjugate into the trial

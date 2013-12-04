@@ -13,7 +13,7 @@ class TrotterHeisenberg{
    public:
    
       //Constructor
-      TrotterHeisenberg(HeisenbergMPO * theMPO, double dtau);
+      TrotterHeisenberg(HeisenbergMPO *theMPO, double dtau);
       
       //Destructor
       ~TrotterHeisenberg();
@@ -57,28 +57,28 @@ class TrotterHeisenberg{
       bool isMagneticField;
       
       //The coupling matrix
-      double * couplingMx;
+      double *couplingMx;
       
       //The number of different two-site couplings
       int nDifferentCouplings;
 
       //The different two-site couplings
-      double * fDifferentCouplings;
+      double *fDifferentCouplings;
       
       //The time step
       double dtau;
       
       //Sz
-      OpSz * theSz;
+      OpSz *theSz;
       
       //Sx
-      OpSx * theSx;
+      OpSx *theSx;
       
       //iSy
-      OpISy * theISy;
+      OpISy *theISy;
       
       //If there is a magnetic field: construct single site propagator exp^{theField * dtau * S^z / 2}
-      double * SingleSitePropagator;
+      double *SingleSitePropagator;
       
       //The propagator per different coupling J = fDifferentCoupling[cnt]: exp^{ -J * dtau * vec{S}_1 * vec{S}_2 }
       //with the convention PropagatorPerCoupling[cnt][row1 + d*col1 + d^2*row2 * d^3*col2]
@@ -91,7 +91,6 @@ class TrotterHeisenberg{
       
       //Set PropagatorPerCoupling, TwoSitePropU, TwoSitePropVT, TwoSitePropS
       void SetTheTwoSitePropagators();
-      
       
 };
 

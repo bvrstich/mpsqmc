@@ -34,7 +34,7 @@ int main(void){
    for (int cnt = 0;cnt < L-1;cnt++)
       theMPO.sCoupling(cnt,cnt+1,1.0);
 
-   theMPO.sField(0.0);
+   theMPO.sField(1.0);
 
    Random RN;
 
@@ -48,7 +48,7 @@ int main(void){
 
    MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);
 
-//   thePopulation.Walk(nSteps);
+   //thePopulation.Walk(nSteps);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

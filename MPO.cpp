@@ -8,14 +8,18 @@ int MPO::gPhys_d() const{ return phys_d; }
 
 int MPO::dimL(const int site) const{
 
-   if ((site<0) || (site>=length)){ return 0; }
+   if ((site<0) || (site>=length))
+      return 0; 
+
    return MPOdimensions[site];
  
 }
 
 int MPO::dimR(const int site) const{
 
-   if ((site<0) || (site>=length)){ return 0; }
+   if ((site<0) || (site>=length)) 
+      return 0;
+
    return MPOdimensions[site+1];
 
 }

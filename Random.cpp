@@ -26,10 +26,14 @@ Random::Random(){
    #endif
    
    gen = new boost::random::mt19937 [num_omp_threads];
-   for (int cnt=0; cnt<num_omp_threads; cnt++){ gen[cnt].seed( time(0) + cnt*cnt*23 + 3571*rank ); }
+
+   for (int cnt=0; cnt<num_omp_threads; cnt++)
+      gen[cnt].seed( time(0) + cnt*cnt*23 + 3571*rank );
    
    dists = new boost::random::uniform_real_distribution<double> * [num_omp_threads];
-   for (int cnt=0; cnt<num_omp_threads; cnt++){ dists[cnt] = new boost::random::uniform_real_distribution<double> (0,1); }
+
+   for (int cnt=0; cnt<num_omp_threads; cnt++)
+      dists[cnt] = new boost::random::uniform_real_distribution<double> (0,1); 
 
 }
 
@@ -84,6 +88,3 @@ void Random::test(){
    delete [] tIDs;
 
 }
-
-
-

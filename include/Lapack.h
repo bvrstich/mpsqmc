@@ -24,8 +24,5 @@ extern "C" {
    double dlansy_(char * norm, char * uplo, int * dimR, double * mx, int * lda, double * work);
    double dlange_(char * norm, int * m, int * n, double * mx, int * lda, double * work);
 
-   void dsaupd_(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, double *resid, int *ncv, double *v, int *ldv, int *iparam, int *ipntr, double *workd, double *workl, int *lworkl, int*info);
-   void dseupd_(bool *rvec,char *howmny,bool *select,double *d,double *Z,int *ldz,double *sigma,char *bmat,int *n,char *which,int *nev,double *tol,double *resid,int *ncv,double *v,int *ldv,int *iparam,int *ipntr,double *workd,double *workl, int *lworkl,int *info);
-
 }
 #endif

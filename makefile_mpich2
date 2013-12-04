@@ -40,7 +40,7 @@ THIS_FOLDER = .
 
 INCLUDE = ./include
 
-LIBS = -larpack -llapack -lblas -fopenmp
+LIBS = -llapack -lblas -fopenmp
 
 CC  = mpicc.mpich2
 CXX = mpicxx.mpich2

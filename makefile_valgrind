@@ -40,7 +40,7 @@ THIS_FOLDER = .
 
 INCLUDE = ./include
 
-LIBS = -lblas -llapack -larpack
+LIBS = -lblas -llapack
 
 CC  = clang
 CXX = clang++

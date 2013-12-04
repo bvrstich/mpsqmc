@@ -54,10 +54,16 @@ class DMRG{
       double sweepright();
       
       //Solve the local Hermitian two-site standard eigenvalue problem
-      double SolveHeff(const int index);
+      /*double SolveHeff(const int index);*/
+      
+      //Solve with Davidson's algorithm
+      double SolveDAVIDSON(const int index);
       
       //Do the matrix-vector multiplication
       void matvec(double * vec, double * resultvec, const int index);
+      
+      //Fill the diagonal preconditioner for Davidson's algo
+      void fillDiag(double * diag, const int index);
       
       //SolveHeff: are the arrays allocated
       bool SolveHeffAllocated;

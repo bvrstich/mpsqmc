@@ -12,8 +12,9 @@ OpI::~OpI(){ }
 
 double OpI::operator()(const int i, const int j) const{
 
-   if ((i!=j) || (i>phys_d) || (i<0)){ return 0.0; }
+   if ((i!=j) || (i>phys_d) || (i<0))
+      return 0.0; 
+
    return 1.0;
 
 }
-

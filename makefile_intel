@@ -40,7 +40,7 @@ THIS_FOLDER = .
 
 INCLUDE = ./include
 
-LIBS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -larpack
+LIBS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
 
 CC  = icc
 CXX = icpc

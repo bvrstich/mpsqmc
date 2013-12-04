@@ -26,7 +26,9 @@ HeisenbergMPO::HeisenbergMPO(const int length, const int phys_d, const bool useL
    MinusH = -0.0;
    couplingMatrix      = new double[(length * (length - 1))/2];
    minusCouplingMatrix = new double[(length * (length - 1))/2];
-   for (int count=0; count<(length * (length - 1))/2; count++){ minusCouplingMatrix[count] = couplingMatrix[count] = 0.0; }
+
+   for (int count=0; count<(length * (length - 1))/2; count++)
+      minusCouplingMatrix[count] = couplingMatrix[count] = 0.0; 
    
    fZero = 0.0;
    fOne = 1.0;
@@ -34,16 +36,23 @@ HeisenbergMPO::HeisenbergMPO(const int length, const int phys_d, const bool useL
    MPOdimensions = new int[length+1];
    fillMPOdimensions();
    
-   MPOprefactors = new double***[length];
-   MPOoperators  = new Operator***[length];
-   for (int site=0; site<length; site++){
+   MPOprefactors = new double *** [length];
+   MPOoperators  = new Operator *** [length];
+
+   for (int site = 0;site < length;site++){
+
       MPOprefactors[site] = new double**[dimL(site)];
       MPOoperators[site]  = new Operator**[dimL(site)];
+
       for (int row=0; row<dimL(site); row++){
+
          MPOprefactors[site][row] = new double*[dimR(site)];
          MPOoperators[site][row]  = new Operator*[dimR(site)];
+
       }
+
    }
+
    fillMPOprefactorsMPOoperators();
    
    RN_nTerms = 0; //Means not allocated
@@ -90,9 +99,14 @@ HeisenbergMPO::~HeisenbergMPO(){
 void HeisenbergMPO::fillMPOdimensions(){
 
    int locSwitch = length/2;
+
    MPOdimensions[0] = MPOdimensions[length] = 1;
-   for (int site=0; site<locSwitch; site++){        MPOdimensions[site+1] = 2 + 3*(site+1);      }
-   for (int site=length-1; site>locSwitch; site--){ MPOdimensions[site]   = 2 + 3*(length-site); }
+
+   for (int site=0; site< locSwitch; site++)
+      MPOdimensions[site+1] = 2 + 3*(site+1);
+
+   for (int site=length-1; site>locSwitch; site--)
+      MPOdimensions[site]   = 2 + 3*(length-site);
 
 }
 

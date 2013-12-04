@@ -41,7 +41,7 @@ THIS_FOLDER = .
 INCLUDE = ./include
 INCLUDE2 = /apps/gent/gengar/harpertown/software/Boost/1.49.0-ictce-4.0.6/include/
 
-LIBS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -L/apps/gent/gengar/harpertown/software/ifort/2011.6.233/compiler/lib/intel64/ -lifcore -L/apps/gent/gengar/harpertown/software/ARPACK/96-ictce-4.0.6/lib/ -larpack
+LIBS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -L/apps/gent/gengar/harpertown/software/ifort/2011.6.233/compiler/lib/intel64/ -lifcore
 
 CC  = mpiicc
 CXX = mpiicpc 

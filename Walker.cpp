@@ -75,5 +75,3 @@ double Walker::calcIndividualProjectedEnergy(MPSstate * HamTimesTrial){
    return HamTimesTrial->InnerProduct(theState) / overlap;
 
 }
-
-

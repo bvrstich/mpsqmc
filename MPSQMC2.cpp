@@ -199,45 +199,62 @@ void MPSQMC2::SetupTrial(){
 
       }
 
-   firstIndexCoupling  = new int[nCouplings];
-   secondIndexCoupling = new int[nCouplings];
+   firstIndexCoupling  = new int [nCouplings];
+   secondIndexCoupling = new int [nCouplings];
 
    nCouplings = 0;
 
-   for (int first=0; first<theMPO->gLength()-1; first++){
-      for (int second=first+1; second<theMPO->gLength(); second++){
+   for(int first = 0;first < theMPO->gLength() - 1;first++)
+      for(int second = first + 1;second < theMPO->gLength();second++){
+
          double coupling = theTrotter->gCoupling(first,second);
-         if (coupling!=0.0){
+
+         if(coupling != 0.0){
+
             firstIndexCoupling[nCouplings]  = first;
             secondIndexCoupling[nCouplings] = second;
             nCouplings++;
+
          }
+
       }
-   }
 
    trotterSVDsize = theMPO->gPhys_d() * theMPO->gPhys_d();
 
    //Multiply for all possible combinations of the SVD decomposition of the two-site Trotter terms, its hermitian conjugate into the trial
    TrotterTermsTimesPsi0 = new MPSstate***[ NThreadsPerRank[MPIrank] ];
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){
-      TrotterTermsTimesPsi0[cnt] = new MPSstate**[nCouplings];
-      for (int cnt2=0; cnt2<nCouplings; cnt2++){
-         TrotterTermsTimesPsi0[cnt][cnt2] = new MPSstate*[trotterSVDsize*trotterSVDsize];
-         for (int cnt3=0; cnt3<trotterSVDsize; cnt3++){
-            for (int cnt4=0; cnt4<trotterSVDsize; cnt4++){
-               if (cnt==0){
+
+   for(int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++){
+
+      TrotterTermsTimesPsi0[cnt] = new MPSstate ** [nCouplings];
+
+      for(int cnt2 = 0;cnt2 < nCouplings;cnt2++){//loop over the different couplings <ij>
+
+         TrotterTermsTimesPsi0[cnt][cnt2] = new MPSstate*[trotterSVDsize*trotterSVDsize];//d^2 x d^2 different MPS's
+
+         for (int cnt3 = 0;cnt3 < trotterSVDsize;cnt3++)
+            for (int cnt4 = 0;cnt4 < trotterSVDsize;cnt4++){
+
+               if (cnt==0){//apply
+
                   TrotterTermsTimesPsi0[cnt][cnt2][cnt3 + trotterSVDsize * cnt4] = new MPSstate(Psi0[cnt]);
                   TrotterTermsTimesPsi0[cnt][cnt2][cnt3 + trotterSVDsize * cnt4]->ApplyTwoSiteTrotterTerm(theTrotter, firstIndexCoupling[cnt2], secondIndexCoupling[cnt2], cnt3, cnt4, true); //true for HC!!
-               } else {
-                  TrotterTermsTimesPsi0[cnt][cnt2][cnt3 + trotterSVDsize * cnt4] = new MPSstate(TrotterTermsTimesPsi0[0][cnt2][cnt3 + trotterSVDsize * cnt4]);
+
                }
+               else//copy
+                  TrotterTermsTimesPsi0[cnt][cnt2][cnt3 + trotterSVDsize * cnt4] = new MPSstate(TrotterTermsTimesPsi0[0][cnt2][cnt3 + trotterSVDsize * cnt4]);
+
             }
-         }
+
       }
+
    }
 
 }
 
+/** 
+ * different function
+ */
 MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
 
 #ifdef USE_MPI_IN_MPSQMC
@@ -268,6 +285,9 @@ MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
 
 }
 
+/**
+ * initialize the walkers
+ */
 void MPSQMC2::SetupWalkers(){
 
    const bool copyTrial = true;
@@ -275,26 +295,38 @@ void MPSQMC2::SetupWalkers(){
    theWalkers          = new Walker * [myMaxNWalkers];
    theWalkersCopyArray = new Walker * [myMaxNWalkers];
 
-   thePDF            = new double*[NThreadsPerRank[MPIrank]];
-   theOperatorCombos = new double*[NThreadsPerRank[MPIrank]];
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){
-      thePDF[cnt]            = new double[theGrid->gNPoints()];
-      theOperatorCombos[cnt] = new double[trotterSVDsize * trotterSVDsize];
-   }
-   sumWalkerWeightPerThread = new double[NThreadsPerRank[MPIrank]];
+   thePDF            = new double * [NThreadsPerRank[MPIrank]];
+   theOperatorCombos = new double * [NThreadsPerRank[MPIrank]];
 
-   for (int cnt=0; cnt<NCurrentWalkersPerRank[MPIrank]; cnt++){
-      if (copyTrial){
+   for(int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++){
+
+      thePDF[cnt]            = new double [theGrid->gNPoints()];
+      theOperatorCombos[cnt] = new double [trotterSVDsize * trotterSVDsize];
+
+   }
+
+   sumWalkerWeightPerThread = new double [NThreadsPerRank[MPIrank]];
+
+   for (int cnt = 0;cnt < NCurrentWalkersPerRank[MPIrank];cnt++){
+
+      if (copyTrial)
          theWalkers[cnt] = new Walker(Psi0[0], 1.0, 1.0, 0.0);
-      } else {
+      else{
+
          theWalkers[cnt] = new Walker(theMPO->gLength(), Dtrunc, theMPO->gPhys_d(), RN);
          theWalkers[cnt]->setOverlap(Psi0[0]);
+
       }
+
       theWalkersCopyArray[cnt] = NULL;
+
    }
-   for (int cnt=NCurrentWalkersPerRank[MPIrank]; cnt<myMaxNWalkers; cnt++){
+
+   for(int cnt=NCurrentWalkersPerRank[MPIrank]; cnt<myMaxNWalkers;cnt++){
+
       theWalkers[cnt] = NULL;
       theWalkersCopyArray[cnt] = NULL;
+
    }
 
 }
@@ -302,6 +334,7 @@ void MPSQMC2::SetupWalkers(){
 void MPSQMC2::Walk(const int steps){
 
    double projectedEnergy = 0.0;
+
    EnergyFunctionAndHistory(1, &projectedEnergy, false);
 
    if (MPIrank==0){
@@ -315,7 +348,8 @@ void MPSQMC2::Walk(const int steps){
 
    }
 
-   if (trotterSVDsize != theGrid->gDim()){ cerr << "trotterSVDsize = " << trotterSVDsize << " and is not equal to theGrid->gDim() = " << theGrid->gDim() << endl; }
+   if(trotterSVDsize != theGrid->gDim())
+      cerr << "trotterSVDsize = " << trotterSVDsize << " and is not equal to theGrid->gDim() = " << theGrid->gDim() << endl;
 
    for (int step=1; step<=steps; step++){
 
@@ -324,11 +358,15 @@ void MPSQMC2::Walk(const int steps){
 
       //Form the total sum of the walker weights and calculate the scaling for population control
 #ifdef USE_MPI_IN_MPSQMC
+
       double totalSumOfWalkerWeights = 0.0;
       MPI::COMM_WORLD.Allreduce(&mySumOfWalkerWeights, &totalSumOfWalkerWeights, 1, MPI::DOUBLE, MPI::SUM);
       double avgWeight = totalSumOfWalkerWeights / totalNCurrentWalkers;
+
 #else
+
       double avgWeight = mySumOfWalkerWeights / totalNCurrentWalkers;
+
 #endif
       double scaling = totalNDesiredWalkers / (totalNCurrentWalkers * avgWeight);
       double targetEnergy = log(scaling)/dtau;
@@ -343,12 +381,13 @@ void MPSQMC2::Walk(const int steps){
          cout << "         E_P = " << projectedEnergy << endl;
          cout << "         E_T = " << targetEnergy << endl;
          cout << "       Omega = " << fluctMetric << endl;
-         write(step, projectedEnergy, targetEnergy, fluctMetric);
+         write(step,totalNCurrentWalkers,projectedEnergy, targetEnergy, fluctMetric);
          cout << "---------------------------------------------------------" << endl;
       }
 
       //Based on scaling, first control the population on each rank separately, and then balance the population over the ranks (uses MPI)
       SeparatePopulationControl(scaling);
+
 #ifdef USE_MPI_IN_MPSQMC
       PopulationBalancing();
 #endif
@@ -357,12 +396,16 @@ void MPSQMC2::Walk(const int steps){
 
 }
 
+/**
+ * Here the trotter terms, propagator terms are applied to every walker individually.
+ */
 double MPSQMC2::PropagateSeparately(){
 
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){ sumWalkerWeightPerThread[cnt] = 0.0; }
+   for(int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++)
+      sumWalkerWeightPerThread[cnt] = 0.0;
 
 #pragma omp parallel for schedule(static) default(none)
-   for (int walker=0; walker<NCurrentWalkersPerRank[MPIrank]; walker++){
+   for(int walker=0; walker < NCurrentWalkersPerRank[MPIrank]; walker++){
 
 #ifdef _OPENMP
       int myID = omp_get_thread_num();
@@ -375,41 +418,57 @@ double MPSQMC2::PropagateSeparately(){
       theWalkers[walker]->setOverlap(Psi0[myID]); //Normalizes and correctly sets the overlap again
 
       //Loop over the non-zero couplings
-      for (int trotterTerm=0; trotterTerm<nCouplings; trotterTerm++){
+      for(int trotterTerm = 0;trotterTerm < nCouplings;trotterTerm++){
 
          //Calculate the possible operator combinations
-         for (int firstOp=0; firstOp<trotterSVDsize; firstOp++){
-            for (int secondOp=0; secondOp<trotterSVDsize; secondOp++){
+         for (int firstOp = 0;firstOp < trotterSVDsize;firstOp++)
+            for (int secondOp = 0;secondOp < trotterSVDsize;secondOp++){
+
                int combinedIndex = firstOp + trotterSVDsize * secondOp;
+
                double expectation = TrotterTermsTimesPsi0[myID][trotterTerm][combinedIndex]->InnerProduct(theWalkers[walker]->gState());
+
                theOperatorCombos[myID][combinedIndex] = expectation;
+
             }
-         }
 
          //Calculate the PDF for possible moves --> theGrid->gDIM() should be equal to trotterSVDsize!!
          double PDFnorm = 0.0;
-         for (int cnt=0; cnt<theGrid->gNPoints(); cnt++){
+
+         for(int cnt = 0;cnt < theGrid->gNPoints();cnt++){
+
             thePDF[myID][cnt] = 0.0;
-            for (int left=0; left<trotterSVDsize; left++){
-               for (int right=0; right<trotterSVDsize; right++){
+
+            for(int left = 0;left < trotterSVDsize;left++)
+               for(int right = 0;right < trotterSVDsize;right++)
                   thePDF[myID][cnt] += theOperatorCombos[myID][left+trotterSVDsize*right] * theGrid->gCoOfPoint(cnt,left) * theGrid->gCoOfPoint(cnt,right);
-               }
-            }
+            
             thePDF[myID][cnt] = max(0.0, thePDF[myID][cnt]);
             thePDF[myID][cnt] *= trotterSVDsize / ( theWalkers[walker]->gOverlap() * theGrid->gNPoints());
+
             PDFnorm += thePDF[myID][cnt];
+
          }
+
          double oneOverPDFnorm = 1.0 / PDFnorm;
-         for (int cnt=0; cnt<theGrid->gNPoints(); cnt++){ thePDF[myID][cnt] *= oneOverPDFnorm; }
+
+         for(int cnt = 0;cnt < theGrid->gNPoints();cnt++)
+            thePDF[myID][cnt] *= oneOverPDFnorm;
+
          theWalkers[walker]->multiplyWeight(PDFnorm);
 
          //Get what you should do
          double randomNumber = RN->rand();
+
          int count = 0;
+
          double CumulativePDF = thePDF[myID][0];
-         while ((CumulativePDF <= randomNumber) && (count<theGrid->gNPoints()-1)){
+
+         while ( (CumulativePDF <= randomNumber) && (count < theGrid->gNPoints()-1) ){
+
             count += 1;
             CumulativePDF += thePDF[myID][count];
+
          }
 
          //Apply the specific term (count) and normalize again
@@ -427,7 +486,10 @@ double MPSQMC2::PropagateSeparately(){
    }
 
    int sumOfWalkerWeights = 0;
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){ sumOfWalkerWeights += sumWalkerWeightPerThread[cnt]; }
+
+   for (int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++)
+      sumOfWalkerWeights += sumWalkerWeightPerThread[cnt]; 
+
    return sumOfWalkerWeights;
 
 }
@@ -438,10 +500,13 @@ void MPSQMC2::SeparatePopulationControl(const double scaling){
 
    int newNumberOfWalkers = 0;
    double minWeight = 1.0;
-   for (int walker=0; walker<NCurrentWalkersPerRank[MPIrank]; walker++){
+
+   for(int walker=0;walker < NCurrentWalkersPerRank[MPIrank];walker++){
 
       double scaledWeight = theWalkers[walker]->gWeight() * scaling;
-      if (scaledWeight < minWeight){ minWeight = scaledWeight; }
+
+      if(scaledWeight < minWeight)
+         minWeight = scaledWeight;
 
       int nCopies = 1;
       double newWeight = scaledWeight;
@@ -450,7 +515,9 @@ void MPSQMC2::SeparatePopulationControl(const double scaling){
 
          nCopies = (int) ( scaledWeight + RN->rand());
          newWeight = 1.0;
-         if (debugPrint){ cout << "Walker with weight " << scaledWeight << " will be " << nCopies << " times copied with weight 1 ." << endl; }
+
+         if (debugPrint)
+            cout << "Walker with weight " << scaledWeight << " will be " << nCopies << " times copied with weight 1 ." << endl;
 
       }
 
@@ -458,24 +525,36 @@ void MPSQMC2::SeparatePopulationControl(const double scaling){
 
          nCopies = (int) ( scaledWeight + RN->rand());
          newWeight = scaledWeight / nCopies;
-         if (debugPrint){ cout << "Walker with weight " << scaledWeight << " will be " << nCopies << " times copied with weight " << newWeight << " ." << endl; }
+
+         if (debugPrint)
+            cout << "Walker with weight " << scaledWeight << " will be " << nCopies << " times copied with weight " << newWeight << " ." << endl;
 
       }
 
-      if (newNumberOfWalkers + nCopies > myMaxNWalkers){
+      if (newNumberOfWalkers + nCopies > myMaxNWalkers)
          cerr << "MPSQMC::Walk (MPI rank " << MPIrank << ") -> The number of desired walkers exceeds the max. allowed number at MPI." << endl;
-      }
 
-      if (nCopies==0){ delete theWalkers[walker]; }
+      if (nCopies==0)
+         delete theWalkers[walker];
+
       if (nCopies>=1){
+
          theWalkers[walker]->setWeight(newWeight);
          theWalkersCopyArray[newNumberOfWalkers] = theWalkers[walker];
-         for (int cnt=1; cnt<nCopies; cnt++){ theWalkersCopyArray[newNumberOfWalkers+cnt] = new Walker(theWalkers[walker]); }
+
+         for (int cnt=1; cnt<nCopies; cnt++)
+            theWalkersCopyArray[newNumberOfWalkers+cnt] = new Walker(theWalkers[walker]);
+
          newNumberOfWalkers += nCopies;
+
       }
    }
-   if (debugPrint){ cout << "The min. encountered weight on rank " << MPIrank << " is " << minWeight << " ." << endl; }
+
+   if (debugPrint)
+      cout << "The min. encountered weight on rank " << MPIrank << " is " << minWeight << " ." << endl;
+
    NCurrentWalkersPerRank[MPIrank] = newNumberOfWalkers;
+
    //Swap the walker arrays
    Walker ** tempWalkers = theWalkers;
    theWalkers = theWalkersCopyArray;
@@ -498,7 +577,7 @@ double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnerg
    double projE_numerator   = 0.0; //Per MPI rank
    double projE_denominator = 0.0; //Per MPI rank
 
-   for (int walker=0; walker<NCurrentWalkersPerRank[MPIrank]; walker++){
+   for(int walker = 0;walker < NCurrentWalkersPerRank[MPIrank];walker++){
 
       const double walkerEnergy = theWalkers[walker]->calcIndividualProjectedEnergy(HPsi0[0]); // <Psi_T | H | walk > / <Psi_T | walk >
 
@@ -507,11 +586,13 @@ double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnerg
       projE_denominator += theWalkers[walker]->gWeight();
 
       //For the energy history and the fluctuation metric
-      if (doFluctuationMetric){
+      if(doFluctuationMetric){
+
          theWalkers[walker]->addEnergyToHistory(walkerEnergy);
          const double walkerAvgEnergy = theWalkers[walker]->gEnergyHistory() / step; // e_j(t) : individual time average energy
          fluctMetric_sumOfE    += walkerAvgEnergy;
          fluctMetric_sumOfESq  += walkerAvgEnergy * walkerAvgEnergy;
+
       }
 
    }
@@ -534,11 +615,12 @@ double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnerg
    MPI::COMM_WORLD.Allreduce(&projE_denominator, &totalDen, 1, MPI::DOUBLE, MPI::SUM);
    projectedEnergy[0] = totalNum / totalDen;
 #else
+   
    //For the fluctuation metric
    double fluctMetric = 0.0;
-   if (doFluctuationMetric){
+
+   if (doFluctuationMetric)
       fluctMetric = ( fluctMetric_sumOfESq - fluctMetric_sumOfE * fluctMetric_sumOfE / totalNCurrentWalkers ) / totalNCurrentWalkers;
-   }
 
    //For the projected energy
    projectedEnergy[0] = projE_numerator / projE_denominator;
@@ -548,11 +630,11 @@ double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnerg
 
 }
 
-void MPSQMC2::write(const int step, const double projectedEnergy, const double targetEnergy, const double fluctMetric){
+void MPSQMC2::write(const int step,const int nwalkers,const double projectedEnergy, const double targetEnergy, const double fluctMetric){
 
    ofstream output("energies.txt",ios::app);
    output.precision(10);
-   output << step << "\t\t" << projectedEnergy << "\t\t" << targetEnergy << "\t\t" << fluctMetric << endl;
+   output << step << "\t\t" << nwalkers << "\t" << projectedEnergy << "\t\t" << targetEnergy << "\t\t" << fluctMetric << endl;
    output.close();
 
 }

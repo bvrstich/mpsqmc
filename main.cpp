@@ -34,21 +34,22 @@ int main(void){
    for (int cnt = 0;cnt < L-1;cnt++)
       theMPO.sCoupling(cnt,cnt+1,1.0);
 
-   theMPO.sField(1.0);
+   theMPO.sField(0.0);
 
    Random RN;
 
    GridGenerator theGrid(4);
-   theGrid.FillSimple(4);
+   theGrid.FillMarsaglia(4);
+
 
    int Dtrunc = 2;
    int Nwalkers = 1000;
-   double dtau = 0.01;
+   double dtau = 0.001;
    int nSteps = 10000;
 
    MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);
 
-   //thePopulation.Walk(nSteps);
+   thePopulation.Walk(nSteps);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

@@ -76,7 +76,7 @@ class MPSQMC2{
       void BubbleSort(double * values, int * order, const int length);
       
       //Write the projected energy, target energy, and fluctuation metric at MC time "step"
-      void write(const int step, const double projectedEnergy, const double targetEnergy, const double fluctMetric);
+      void write(const int step,const int nwalkers, const double projectedEnergy, const double targetEnergy, const double fluctMetric);
       
       /****************************
       *** Trial wfn information ***

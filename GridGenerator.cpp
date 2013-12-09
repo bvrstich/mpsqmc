@@ -20,15 +20,28 @@ GridGenerator::GridGenerator(const int dim){
 
 GridGenerator::~GridGenerator(){
 
-   if (gridFilled){ delete [] grid; }
+   if(gridFilled)
+      delete [] grid;
 
 }
 
-int GridGenerator::gDim() const{ return dim; }
+int GridGenerator::gDim() const {
 
-int GridGenerator::gNPoints() const{ return nStates; }
+   return dim; 
 
-double GridGenerator::gCoOfPoint(const int point, const int index) const{ return grid[ index + dim * point ]; }
+}
+
+int GridGenerator::gNPoints() const {
+   
+   return nStates; 
+   
+}
+
+double GridGenerator::gCoOfPoint(const int point, const int index) const {
+   
+   return grid[ index + dim * point ]; 
+   
+}
 
 ostream& operator<<(ostream& os, const GridGenerator& theGrid){
 
@@ -39,29 +52,47 @@ ostream& operator<<(ostream& os, const GridGenerator& theGrid){
    
    //Print the points, and calculate in the meanwhile the sum of the outer product of the vectors
    double * sumTest = new double[dimension*dimension];
-   for (int cnt=0; cnt<dimension*dimension; cnt++){ sumTest[cnt] = 0.0; }
+
+   for(int cnt=0; cnt<dimension*dimension; cnt++)
+      sumTest[cnt] = 0.0;
    
    os << "The points:" << endl;
-   for (int cnt=0; cnt<nStates; cnt++){
+
+   for(int cnt = 0;cnt < nStates;cnt++){
+
       os << "      Point " << cnt+1 << "\t [";
+
       double sumSq = 0.0;
-      for (int cnt2=0; cnt2<dimension; cnt2++){
+
+      for(int cnt2 = 0;cnt2 < dimension;cnt2++){
+
          double val = theGrid.gCoOfPoint(cnt,cnt2);
+
          os << val << "\t";
+
          double prod = val*val;
+
          sumSq += prod;
          sumTest[ cnt2 * (1 + dimension) ] += prod;
-         for (int cnt3=cnt2+1; cnt3<dimension; cnt3++){
+
+         for (int cnt3 = cnt2+1;cnt3 < dimension;cnt3++){
+
             prod = val * theGrid.gCoOfPoint(cnt,cnt3);
+
             sumTest[ cnt2 + dimension * cnt3 ] += prod;
             sumTest[ cnt3 + dimension * cnt2 ] += prod;
+
          }
+
       }
+
       os << "] \t\t with 2-norm " << sqrt(sumSq) << endl;
+
    }
    
    //Compare the outer product of the vectors with nStates/dimension
    os << "#vectors / dim = " << ((double) nStates)/dimension << " vs. sum over the outer product of the vectors:" << endl;
+
    for (int row=0; row<dimension; row++){
       os << "      [ ";
       for (int col=0; col<dimension; col++){
@@ -195,27 +226,40 @@ void GridGenerator::FillMarsaglia(const int pointsPerCo){
 
 void GridGenerator::FillSimple(const int denominator){
 
-   if (gridFilled){
+   if(gridFilled){
+
       delete [] grid;
       gridFilled = false;
+
    }
 
-   int * currentState = new int[dim];
+   int * currentState = new int [dim];
    
    //Calculate the number of states
    currentState[0] = denominator;
-   for (int cnt=1; cnt<dim; cnt++){ currentState[cnt] = 0; }
+
+   for(int cnt = 1;cnt < dim;cnt++)
+      currentState[cnt] = 0; 
+
    nStates = 2; //[+denom,0,0...] and [-denom,0,0...]
    bool couldGenerate = true;
-   while (couldGenerate){
-      couldGenerate = GenerateNextSimple(currentState, denominator);
-      if (couldGenerate){
+
+   while(couldGenerate){
+
+      couldGenerate = GenerateNextSimple(currentState,denominator);
+
+      if(couldGenerate){
+
          int factor = 1;
-         for (int cnt=0; cnt<dim; cnt++){
-            if (currentState[cnt]>0){ factor *= 2; }
-         }
+
+         for(int cnt = 0;cnt < dim;cnt++)
+            if(currentState[cnt] > 0)
+               factor *= 2;
+
          nStates += factor;
+
       }
+
    }
    
    //Allocate the grid
@@ -265,19 +309,26 @@ void GridGenerator::FillSimple(const int denominator){
 
 bool GridGenerator::GenerateNextSimple(int * state, const int denominator){
 
-   if (state[dim-1] == denominator){ return false; }
+   if(state[dim-1] == denominator)
+      return false;
    
-   if (state[dim-1] == 0){
+   if(state[dim-1] == 0){
    
       int index = dim-2;
-      while (state[index]==0){ index--; }
+
+      while(state[index]==0)
+         index--;
+
       state[index]   -= 1;
       state[index+1] += 1;
    
-   } else {
+   }
+   else{
    
       int index = dim-2;
-      while (state[index]==0){ index--; }
+      while(state[index]==0)
+         index--;
+
       int lastsite    = state[dim-1];
       state[dim-1]   -= lastsite;
       state[index+1] += 1 + lastsite;
@@ -288,4 +339,3 @@ bool GridGenerator::GenerateNextSimple(int * state, const int denominator){
    return true;
 
 }
-

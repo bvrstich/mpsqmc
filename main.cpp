@@ -44,7 +44,7 @@ int main(void){
 
    int Dtrunc = 2;
    int Nwalkers = 1000;
-   double dtau = 0.001;
+   double dtau = 0.01;
    int nSteps = 10000;
 
    MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);

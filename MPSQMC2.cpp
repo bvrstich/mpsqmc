@@ -485,7 +485,7 @@ double MPSQMC2::PropagateSeparately(){
 
    }
 
-   int sumOfWalkerWeights = 0;
+   double sumOfWalkerWeights = 0;
 
    for (int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++)
       sumOfWalkerWeights += sumWalkerWeightPerThread[cnt]; 

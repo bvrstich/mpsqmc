@@ -1,4 +1,4 @@
-//#define USE_MPI_IN_MPSQMC
+#define USE_MPI_IN_MPSQMC
 
 #ifdef USE_MPI_IN_MPSQMC
    #include <mpi.h>

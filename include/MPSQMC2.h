@@ -15,7 +15,7 @@ class MPSQMC2{
    public:
    
       //Constructor
-      MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int Dtrunc, const int Nwalkers, const double dtau);
+      MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau);
       
       //Destructor
       ~MPSQMC2();
@@ -41,8 +41,11 @@ class MPSQMC2{
       //The random number generator
       Random * RN;
       
-      //The MPS truncation dimension
-      int Dtrunc;
+      //The MPS truncation dimension of the trial wavefunction
+      int DT;
+
+      //The MPS truncation dimension of the walkers
+      int DW;
       
       //The total desired number of walkers
       int totalNDesiredWalkers;

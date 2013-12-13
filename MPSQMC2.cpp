@@ -17,16 +17,18 @@ using namespace std;
  * constructor of the MPSQMC2 object, takes input parameters that define the QMC walk.
  * @param theMPO MPO containing relevant matrix elements, defines system being studied
  * @param theGrid Generates a grid for the random picking of terms from the two-site trotter MPO's
- * @param Dtrunc dimension of the trialstate and the walkers
+ * @param Dtrunc dimension of the trialstate
+ * @param Dtrunc dimension of the walkers
  * @param Nwalkers number of Walker states
  * @param dtau time step of each evolution
  */
-MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int Dtrunc, const int Nwalkers, const double dtau){
+MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau){
 
    this->theMPO = theMPO;
    this->theGrid = theGrid;
    this->RN = RN;
-   this->Dtrunc = Dtrunc;
+   this->DT = DT;
+   this->DW = DW;
    this->dtau = dtau;
 
    this->theTrotter = new TrotterHeisenberg(theMPO,dtau);
@@ -35,7 +37,7 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
    this->totalNCurrentWalkers = Nwalkers;
 
    SetupOMPandMPILoadDistribution();
- 
+
    myMaxNWalkers = max(1000,3*NDesiredWalkersPerRank[MPIrank]);
 
    SetupTrial();
@@ -60,10 +62,14 @@ void MPSQMC2::SetupOMPandMPILoadDistribution(){
    //Finding out how many threads are running for each process, as well as the total amount
    NThreadsPerRank          = new int[MPIsize];
    NThreadsPerRank[MPIrank] = myNOMPthreads;
+
    int totalNOMPthreads = 0;
+
    for (int count=0; count<MPIsize; count++){
+
       MPI::COMM_WORLD.Bcast(NThreadsPerRank + count, 1, MPI::INT, count);
       totalNOMPthreads += NThreadsPerRank[count];
+
    }
 
    //Distribute the workload according to the threads
@@ -148,7 +154,7 @@ void MPSQMC2::SetupTrial(){
    if (MPIrank==0){
 
       //create initial MPS guess
-      Psi0[0] = new MPSstate(theMPO->gLength(),Dtrunc,theMPO->gPhys_d(),RN);
+      Psi0[0] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
 
       //find optimal MPS for specific MPO using DMRG algorithm
       DMRG * solver = new DMRG(Psi0[0],theMPO);
@@ -173,7 +179,7 @@ void MPSQMC2::SetupTrial(){
 
    if(MPIrank==0){
 
-      HPsi0[0] = new MPSstate(theMPO->gLength(),Dtrunc,theMPO->gPhys_d(),RN);
+      HPsi0[0] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
       HPsi0[0]->ApplyMPO(theMPO, Psi0[0]);
       HPsi0[0]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
@@ -290,7 +296,7 @@ MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
  */
 void MPSQMC2::SetupWalkers(){
 
-   const bool copyTrial = true;
+   const bool copyTrial = false;
 
    theWalkers          = new Walker * [myMaxNWalkers];
    theWalkersCopyArray = new Walker * [myMaxNWalkers];
@@ -313,7 +319,7 @@ void MPSQMC2::SetupWalkers(){
          theWalkers[cnt] = new Walker(Psi0[0], 1.0, 1.0, 0.0);
       else{
 
-         theWalkers[cnt] = new Walker(theMPO->gLength(), Dtrunc, theMPO->gPhys_d(), RN);
+         theWalkers[cnt] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), RN);
          theWalkers[cnt]->setOverlap(Psi0[0]);
 
       }

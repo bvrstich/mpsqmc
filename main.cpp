@@ -41,15 +41,15 @@ int main(void){
    GridGenerator theGrid(4);
    theGrid.FillMarsaglia(4);
 
-
-   int Dtrunc = 2;
-   int Nwalkers = 1000;
+   int DT = 4;
+   int DW = 2;
+   int Nwalkers = 1024;
    double dtau = 0.01;
    int nSteps = 10000;
 
-   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);
+   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, DT,DW, Nwalkers, dtau);
 
-   thePopulation.Walk(nSteps);
+//   thePopulation.Walk(nSteps);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
@@ -143,11 +143,12 @@ void MPSQMCcheck(){
    GridGenerator theGrid(4);
    theGrid.FillSimple(4);
 
-   int Dtrunc = 2;
+   int DT = 2;
+   int DW = 2;
    int Nwalkers = 1000;
    double dtau = 0.01;
    int nSteps = 10000;
-   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);
+   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, DT, DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
 
 }

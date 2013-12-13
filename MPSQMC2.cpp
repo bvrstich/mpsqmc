@@ -40,6 +40,8 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
 
    myMaxNWalkers = max(1000,3*NDesiredWalkersPerRank[MPIrank]);
 
+   MPI::COMM_WORLD.Barrier();
+
    SetupTrial();
    SetupWalkers();
 
@@ -74,20 +76,31 @@ void MPSQMC2::SetupOMPandMPILoadDistribution(){
 
    //Distribute the workload according to the threads
    NDesiredWalkersPerRank = new int[MPIsize];
+
    int remainder = totalNDesiredWalkers;
-   for (int count=0; count<MPIsize; count++){
+
+   for(int count=0; count<MPIsize; count++){
+
       NDesiredWalkersPerRank[count] = (int)(((double) totalNDesiredWalkers * NThreadsPerRank[count]) / totalNOMPthreads);
       remainder -= NDesiredWalkersPerRank[count];
+
    }
-   for (int count=0; count<remainder; count++){ NDesiredWalkersPerRank[count] += 1; }
+
+   for (int count=0; count<remainder; count++)
+      NDesiredWalkersPerRank[count] += 1;
+
    NCurrentWalkersPerRank = new int[MPIsize];
-   for (int count=0; count<MPIsize; count++){ NCurrentWalkersPerRank[count] = NDesiredWalkersPerRank[count]; }
+
+   for (int count=0; count<MPIsize; count++)
+      NCurrentWalkersPerRank[count] = NDesiredWalkersPerRank[count];
 
    if (MPIrank==0){
+
       cout << "There are " << MPIsize << " MPI processes." << endl;
-      for (int cnt=0; cnt<MPIsize; cnt++){
+
+      for (int cnt=0; cnt<MPIsize; cnt++)
          cout << "   MPI rank " << cnt << " has " << NThreadsPerRank[cnt] << " threads and carries " << NDesiredWalkersPerRank[cnt] << " walkers." << endl;
-      }
+      
    }
 
 #else
@@ -268,22 +281,33 @@ MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
    int dim = theMPO->gLength()+1;
    int * VirtualDims = new int[dim];
    int truncDim = 0;
+   
    if (MPIrank==0){
-      for (int cnt=0; cnt<dim; cnt++){ VirtualDims[cnt] = pointer->gDimAtBound(cnt); }
+
+      for(int cnt = 0;cnt < dim;cnt++)
+         VirtualDims[cnt] = pointer->gDimAtBound(cnt);
+
       truncDim = pointer->gDtrunc();
+
    }
+
    MPI::COMM_WORLD.Bcast(VirtualDims, dim, MPI::INT, 0);
    MPI::COMM_WORLD.Bcast(&truncDim, 1, MPI::INT, 0);
-   if (MPIrank>0){
+
+   if(MPIrank>0)
       pointer = new MPSstate(theMPO->gLength(), truncDim, theMPO->gPhys_d(), VirtualDims, RN);
-   }
+   
    delete [] VirtualDims;
 
    //Broadcast the Psi storage from rank 0
    for (int site=0; site<theMPO->gLength(); site++){
+
       int dim = pointer->gDimAtBound(site) * pointer->gDimAtBound(site+1) * pointer->gPhys_d();
+
       double * storage = pointer->gMPStensor(site)->gStorage();
+
       MPI::COMM_WORLD.Bcast(storage, dim, MPI::DOUBLE, 0);
+
    }
 #endif
 

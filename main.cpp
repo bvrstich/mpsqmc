@@ -49,7 +49,7 @@ int main(void){
 
    MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, DT,DW, Nwalkers, dtau);
 
-//   thePopulation.Walk(nSteps);
+   thePopulation.Walk(nSteps);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

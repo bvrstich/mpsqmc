@@ -698,16 +698,25 @@ void MPSQMC2::PopulationBalancing(){
    double * Noffset = new double[MPIsize];
    bool oneFracDeviating = false;
    const double fractionScaling = ((double) totalNCurrentWalkers) / totalNDesiredWalkers; //We proportionally want to distribute the total load
-   for (int count=0; count<MPIsize; count++){
+
+   for (int count = 0;count < MPIsize;count++){
+
       Noffset[count] = NCurrentWalkersPerRank[count] - NDesiredWalkersPerRank[count] * fractionScaling; //So we calculate the offset from "equilibrium"
       double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
-      if (frac > threshold_start){ oneFracDeviating = true; } //if one or more offsets are too large: redistribute       
+
+      cout << count << "\t" << Noffset[count] << endl;
+
+      if(frac > threshold_start) 
+         oneFracDeviating = true; //if one or more offsets are too large: redistribute       
+
    }
 
+   
    if ((debuginfoprint) && (MPIrank==0)){
-      for (int cnt=0; cnt<MPIsize; cnt++){
+
+      for (int cnt=0; cnt<MPIsize; cnt++)
          cout << "MPSQMC::PopulationBalancing -> Nwalkers(" << cnt << ") = " << NCurrentWalkersPerRank[cnt] << " and Noffset(" << cnt << ") = " << Noffset[cnt] << endl;
-      }
+
    }
 
    if (oneFracDeviating){

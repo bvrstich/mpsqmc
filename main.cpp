@@ -43,7 +43,7 @@ int main(void){
 
    int DT = 4;
    int DW = 2;
-   int Nwalkers = 8192;
+   int Nwalkers = 1000;
    double dtau = 0.01;
    int nSteps = 10000;
 

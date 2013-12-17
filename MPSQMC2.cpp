@@ -43,6 +43,9 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
    MPI::COMM_WORLD.Barrier();
 
    SetupTrial();
+
+   MPI::COMM_WORLD.Barrier();
+
    SetupWalkers();
 
 }
@@ -388,6 +391,7 @@ void MPSQMC2::Walk(const int steps){
 
       //Form the total sum of the walker weights and calculate the scaling for population control
 #ifdef USE_MPI_IN_MPSQMC
+      MPI::COMM_WORLD.Barrier();
 
       double totalSumOfWalkerWeights = 0.0;
       MPI::COMM_WORLD.Allreduce(&mySumOfWalkerWeights, &totalSumOfWalkerWeights, 1, MPI::DOUBLE, MPI::SUM);
@@ -417,6 +421,8 @@ void MPSQMC2::Walk(const int steps){
 
       //Based on scaling, first control the population on each rank separately, and then balance the population over the ranks (uses MPI)
       SeparatePopulationControl(scaling);
+
+      MPI::COMM_WORLD.Barrier();
 
 #ifdef USE_MPI_IN_MPSQMC
       PopulationBalancing();
@@ -699,19 +705,30 @@ void MPSQMC2::PopulationBalancing(){
    bool oneFracDeviating = false;
    const double fractionScaling = ((double) totalNCurrentWalkers) / totalNDesiredWalkers; //We proportionally want to distribute the total load
 
+   //send and recieve to syncronize NCurrentWalkersPerRank!
+   if(MPIrank > 0)
+      MPI_Send(&NCurrentWalkersPerRank[MPIrank],1,MPI_INT,0,MPIrank,MPI_COMM_WORLD);
+
+   MPI::COMM_WORLD.Barrier();
+
+   //receive
+   if(MPIrank == 0)
+      for(int rank = 1;rank < MPIsize;++rank)
+         MPI_Recv(&NCurrentWalkersPerRank[rank],1,MPI_INT,rank,rank,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+
+   //broadcast to other ranks:
+   MPI_Bcast(NCurrentWalkersPerRank,MPIsize,MPI_INT,0,MPI_COMM_WORLD);
+
    for (int count = 0;count < MPIsize;count++){
 
       Noffset[count] = NCurrentWalkersPerRank[count] - NDesiredWalkersPerRank[count] * fractionScaling; //So we calculate the offset from "equilibrium"
       double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
-
-      cout << count << "\t" << Noffset[count] << endl;
 
       if(frac > threshold_start) 
          oneFracDeviating = true; //if one or more offsets are too large: redistribute       
 
    }
 
-   
    if ((debuginfoprint) && (MPIrank==0)){
 
       for (int cnt=0; cnt<MPIsize; cnt++)
@@ -719,12 +736,16 @@ void MPSQMC2::PopulationBalancing(){
 
    }
 
-   if (oneFracDeviating){
+   if(oneFracDeviating){
 
-      if (debuginfoprint){
+      if(debuginfoprint){
+
          double projectedEnergy = 0.0;
          EnergyFunctionAndHistory(1, &projectedEnergy, false);
-         if (MPIrank==0){ cout << "MPSQMC::PopulationBalancing -> As a check: projected E before = " << projectedEnergy << endl; }
+
+         if (MPIrank==0)
+            cout << "MPSQMC::PopulationBalancing -> As a check: projected E before = " << projectedEnergy << endl;
+
       }
 
       int * work = new int[MPIsize];
@@ -825,6 +846,7 @@ void MPSQMC2::PopulationBalancing(){
    }
 
    delete [] Noffset;
+
 #endif
 
 }

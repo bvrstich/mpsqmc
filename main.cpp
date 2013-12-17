@@ -43,7 +43,7 @@ int main(void){
 
    int DT = 4;
    int DW = 2;
-   int Nwalkers = 1024;
+   int Nwalkers = 8192;
    double dtau = 0.01;
    int nSteps = 10000;
 
@@ -132,7 +132,7 @@ void MPSQMCcheck(){
 
    Random RN;
 
-   if (false){
+   if(false){
       int D = 2*2*2*2*2;
       MPSstate Psi0(length, D, d, &RN);
       DMRG theSolver(&Psi0, &theMPO);

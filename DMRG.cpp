@@ -487,7 +487,7 @@ void DMRG::fillDiag(double * diag, const int index){
    const int dimRmpo = theMPO->dimR(index+1);
    const int phys_d = theMPO->gPhys_d();
    
-   #pragma omp parallel for schedule(static) default(none) shared(diag, dimLsmall, dimRsmall)
+   #pragma omp parallel for schedule(static) default(none) shared(diag)
    for (int combined=0; combined<phys_d*phys_d; combined++){
       const int physL = combined % phys_d;
       const int physR = combined / phys_d;

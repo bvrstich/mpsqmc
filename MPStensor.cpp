@@ -2,6 +2,13 @@
 #include "MPStensor.h"
 #include "Lapack.h"
 #include "Random.h"
+#include <iostream>
+
+using std::cout;
+using std::endl;
+using std::ostream;
+using std::ifstream;
+
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 9, 2013 */
 
@@ -29,6 +36,21 @@ MPStensor::MPStensor(MPStensor * toCopy){
    int inc = 1;
    dcopy_(&storageSize,toCopy->gStorage(),&inc,storage,&inc);
    
+}
+
+//construct from file
+MPStensor::MPStensor(const char *filename,Random *RN){
+
+   ifstream in(filename);
+   in >> dimL >> phys_d >> dimR >> storageSize;
+
+   this->RN = RN;
+
+   storage = new double [storageSize];
+
+   for(int i = 0;i < storageSize;++i)
+      in >> i >> storage[i];
+
 }
 
 void MPStensor::Reset(const int dimL, const int dimR){
@@ -170,4 +192,13 @@ void MPStensor::RightMultiply(double * Rmx, double * work){
    
 }
 
+ostream &operator<<(ostream &output,const MPStensor &tensor){
 
+   output << tensor.dimL << "\t" << tensor.phys_d << "\t" << tensor.dimR << "\t" << tensor.storageSize << endl;
+
+   for(int i = 0;i < tensor.storageSize;++i)
+      output << i << "\t" << tensor.storage[i] << endl;
+
+   return output;
+
+}

@@ -1,11 +1,19 @@
 #ifndef MPSTENSOR_H
 #define MPSTENSOR_H
 
+#include <iostream>
+#include <fstream>
+
+using std::ostream;
+using std::ifstream;
+
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 9, 2013 */
 
 #include "Random.h"
 
 class MPStensor{
+
+   friend ostream &operator<<(ostream &output,const MPStensor &tensor);
 
    public:
    
@@ -14,6 +22,8 @@ class MPStensor{
       
       //Copy constructor
       MPStensor(MPStensor * toCopy);
+
+      MPStensor(const char *filename,Random *RN);
       
       //Destructor
       ~MPStensor();

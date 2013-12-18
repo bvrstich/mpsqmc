@@ -38,13 +38,17 @@ int main(void){
 
    Random RN;
 
-   int D = 4;
+   MPSstate Psi0("mps.out",&RN);
 
-   MPSstate Psi0(L,D,d,&RN);
+   cout << Psi0 << endl;
+
+   //out << Psi0 << endl;
+
+   /*
    DMRG theSolver(&Psi0, &theMPO);
    double Energy = theSolver.Solve();
    cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
-
+*/
    /*
       GridGenerator theGrid(4);
       theGrid.FillMarsaglia(4);

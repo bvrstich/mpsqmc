@@ -11,6 +11,8 @@
 
 class MPSstate{
 
+   friend ostream &operator<<(ostream &output,MPSstate &mps);
+
    public:
    
       //Constructor
@@ -21,7 +23,9 @@ class MPSstate{
       
       //Copy contructor
       MPSstate(MPSstate * toCopy);
-      
+
+      MPSstate(const char *filename,Random *RN);
+ 
       //Destructor
       ~MPSstate();
       

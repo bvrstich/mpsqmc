@@ -87,6 +87,46 @@ MPSstate::MPSstate(MPSstate * toCopy){
 
 }
 
+//construct from file
+MPSstate::MPSstate(const char *filename,Random *RN){
+
+   ifstream in(filename);
+   in >> length >> Dtrunc >> phys_d;
+
+   this->RN = RN;
+
+   //get the dimensions
+   VirtualD = new int [length + 1];
+
+   for(int i = 0;i < length + 1;++i)
+      in >> i >> VirtualD[i];
+
+   theTensors = new MPStensor * [length];
+
+   for(int cnt = 0;cnt < length;cnt++)
+      theTensors[cnt] = new MPStensor(VirtualD[cnt],VirtualD[cnt+1],phys_d,RN);
+
+   //now fill the rest from file
+   for(int i = 0;i < length;++i){
+
+      int storsize;
+
+      in >> i >> storsize;
+
+      for(int j = 0;j < storsize;++j)
+         in >> i >> j >> theTensors[i]->gStorage()[j];
+
+   }
+
+
+   //allocate the tensors
+   TwoSiteObjectAllocated = false;
+   work1Allocated = false;
+   work2Allocated = false;
+   work3Allocated = false;
+
+}
+
 MPSstate::~MPSstate(){
    
    for (int cnt=0; cnt<length; cnt++){
@@ -605,6 +645,29 @@ void MPSstate::ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter)
 
 }
 
+ostream &operator<<(ostream &output,MPSstate &mps){
 
+   //first print the essentials
+   output << mps.length << "\t" << mps.Dtrunc << "\t" << mps.phys_d << endl;
 
+   //then the bond dimensions
+   for(int i = 0;i < mps.length+1;++i)
+      output << i << "\t" << mps.VirtualD[i] << endl;
 
+   //finally the tensors themselves
+   for(int i = 0;i < mps.length;++i){
+
+      int storsize = mps.VirtualD[i] * mps.VirtualD[i + 1] * mps.phys_d;
+
+      output << i << "\t" << storsize << endl;
+
+      double *storage = mps.gMPStensor(i)->gStorage();
+
+      for(int j = 0;j < storsize;++j)
+         output << i << "\t" << j << "\t" << storage[j] << endl;
+
+   }
+
+   return output;
+
+}

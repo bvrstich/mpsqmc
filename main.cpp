@@ -26,7 +26,7 @@ int main(void){
 
    cout.precision(15);
 
-   int L = 10;
+   int L = 50;
    int d = 2;
 
    HeisenbergMPO theMPO(L,d,false);
@@ -38,11 +38,19 @@ int main(void){
 
    Random RN;
 
-   GridGenerator theGrid(4);
-   theGrid.FillMarsaglia(4);
+   int D = 4;
 
-   int DT = 4;
-   int DW = 2;
+   MPSstate Psi0(L,D,d,&RN);
+   DMRG theSolver(&Psi0, &theMPO);
+   double Energy = theSolver.Solve();
+   cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
+
+   /*
+      GridGenerator theGrid(4);
+      theGrid.FillMarsaglia(4);
+
+      int DT = 4;
+      int DW = 2;
    int Nwalkers = 1000;
    double dtau = 0.01;
    int nSteps = 10000;
@@ -50,7 +58,7 @@ int main(void){
    MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, DT,DW, Nwalkers, dtau);
 
    thePopulation.Walk(nSteps);
-
+*/
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
 #endif

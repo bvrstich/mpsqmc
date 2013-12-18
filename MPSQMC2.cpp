@@ -40,11 +40,15 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
 
    myMaxNWalkers = max(1000,3*NDesiredWalkersPerRank[MPIrank]);
 
+#ifdef USE_MPI_IN_MPSQMC
    MPI::COMM_WORLD.Barrier();
+#endif
 
    SetupTrial();
 
+#ifdef USE_MPI_IN_MPSQMC
    MPI::COMM_WORLD.Barrier();
+#endif
 
    SetupWalkers();
 
@@ -422,7 +426,9 @@ void MPSQMC2::Walk(const int steps){
       //Based on scaling, first control the population on each rank separately, and then balance the population over the ranks (uses MPI)
       SeparatePopulationControl(scaling);
 
+#ifdef USE_MPI_IN_MPSQMC
       MPI::COMM_WORLD.Barrier();
+#endif
 
 #ifdef USE_MPI_IN_MPSQMC
       PopulationBalancing();

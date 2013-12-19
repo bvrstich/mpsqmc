@@ -16,6 +16,9 @@ class MPSQMC2{
    
       //Constructor
       MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau);
+
+      //constructor with input trialwavefunction
+      MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
       
       //Destructor
       ~MPSQMC2();
@@ -107,7 +110,7 @@ class MPSQMC2{
       int trotterSVDsize;
       
       //Setup the trial wfn
-      void SetupTrial();
+      void SetupTrial(bool dmrg_flag);
       
       /******************
       *** The walkers ***

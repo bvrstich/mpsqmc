@@ -44,7 +44,55 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
    MPI::COMM_WORLD.Barrier();
 #endif
 
-   SetupTrial();
+   Psi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
+
+   SetupTrial(true);
+
+#ifdef USE_MPI_IN_MPSQMC
+   MPI::COMM_WORLD.Barrier();
+#endif
+
+   SetupWalkers();
+
+}
+
+/**
+ * constructor of the MPSQMC2 object, takes input parameters that define the QMC walk.
+ * @param theMPO MPO containing relevant matrix elements, defines system being studied
+ * @param theGrid Generates a grid for the random picking of terms from the two-site trotter MPO's
+ * @param Psi0 input trialwavefunction
+ * @param Dtrunc dimension of the walkers
+ * @param Nwalkers number of Walker states
+ * @param dtau time step of each evolution
+ */
+MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
+
+   this->theMPO = theMPO;
+   this->theGrid = theGrid;
+   this->RN = RN;
+   this->DT = Psi0_in->gDtrunc();
+   this->DW = DW;
+   this->dtau = dtau;
+
+   this->theTrotter = new TrotterHeisenberg(theMPO,dtau);
+
+   this->totalNDesiredWalkers = Nwalkers;
+   this->totalNCurrentWalkers = Nwalkers;
+
+   SetupOMPandMPILoadDistribution();
+
+   myMaxNWalkers = max(1000,3*NDesiredWalkersPerRank[MPIrank]);
+
+#ifdef USE_MPI_IN_MPSQMC
+   MPI::COMM_WORLD.Barrier();
+#endif
+
+   Psi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
+
+   //copy Psi0 into the rank 0:
+   Psi0[0] = new MPSstate(Psi0_in);
+
+   SetupTrial(false);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::COMM_WORLD.Barrier();
@@ -134,10 +182,12 @@ MPSQMC2::~MPSQMC2(){
          for (int cnt3=0; cnt3<trotterSVDsize*trotterSVDsize; cnt3++){ delete TrotterTermsTimesPsi0[cnt][cnt2][cnt3]; }
          delete [] TrotterTermsTimesPsi0[cnt][cnt2];
       }
+
       delete Psi0[cnt];
       delete HPsi0[cnt];
       delete [] TrotterTermsTimesPsi0[cnt];
    }
+
    delete [] Psi0;
    delete [] HPsi0;
    delete [] TrotterTermsTimesPsi0;
@@ -166,24 +216,27 @@ MPSQMC2::~MPSQMC2(){
 /**
  * construct the trial wavefunction by performing a DMRG calculation
  */
-void MPSQMC2::SetupTrial(){
+void MPSQMC2::SetupTrial(bool dmrg_flag){
 
-   //Rank 0 does the DMRG optimization, and the solution gets copied so every thread on every rank has 1 copy.
-   Psi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
+   if(MPIrank==0){
 
-   if (MPIrank==0){
+      if(dmrg_flag){
 
-      //create initial MPS guess
-      Psi0[0] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+         //create initial MPS guess
+         Psi0[0] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
 
-      //find optimal MPS for specific MPO using DMRG algorithm
-      DMRG * solver = new DMRG(Psi0[0],theMPO);
+         //find optimal MPS for specific MPO using DMRG algorithm
+         DMRG * solver = new DMRG(Psi0[0],theMPO);
 
-      solver->Solve();
+         solver->Solve();
 
-      delete solver;
+         delete solver;
 
-      Psi0[0]->LeftNormalize();
+         Psi0[0]->LeftNormalize();
+
+      }
+      else
+         Psi0[0]->LeftNormalize();
 
    }
 
@@ -288,7 +341,7 @@ MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
    int dim = theMPO->gLength()+1;
    int * VirtualDims = new int[dim];
    int truncDim = 0;
-   
+
    if (MPIrank==0){
 
       for(int cnt = 0;cnt < dim;cnt++)
@@ -303,7 +356,7 @@ MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
 
    if(MPIrank>0)
       pointer = new MPSstate(theMPO->gLength(), truncDim, theMPO->gPhys_d(), VirtualDims, RN);
-   
+
    delete [] VirtualDims;
 
    //Broadcast the Psi storage from rank 0
@@ -327,7 +380,7 @@ MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
  */
 void MPSQMC2::SetupWalkers(){
 
-   const bool copyTrial = false;
+   const bool copyTrial = true;
 
    theWalkers          = new Walker * [myMaxNWalkers];
    theWalkersCopyArray = new Walker * [myMaxNWalkers];
@@ -344,10 +397,37 @@ void MPSQMC2::SetupWalkers(){
 
    sumWalkerWeightPerThread = new double [NThreadsPerRank[MPIrank]];
 
-   for (int cnt = 0;cnt < NCurrentWalkersPerRank[MPIrank];cnt++){
+   if(copyTrial){
 
-      if (copyTrial)
-         theWalkers[cnt] = new Walker(Psi0[0], 1.0, 1.0, 0.0);
+      theWalkers[0] = new Walker(Psi0[0],1.0,1.0,0.0);
+
+      if(DW < DT){
+
+         theWalkers[0]->gState()->CompressState(DW);//compress the state to Walker D
+         theWalkers[0]->setOverlap(Psi0[0]);
+
+         //test
+         MPSstate tmp(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+         tmp.ApplyMPO(theMPO, theWalkers[0]->gState());
+
+         cout << theWalkers[0]->gOverlap() << endl;
+         cout << tmp.InnerProduct(theWalkers[0]->gState()) << endl;
+         cout << theWalkers[0]->gState()->InnerProduct(theWalkers[0]->gState()) << endl;
+
+      }
+
+   }
+   else{
+
+      theWalkers[0] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), RN);
+      theWalkers[0]->setOverlap(Psi0[0]);
+
+   }
+
+   for(int cnt = 1;cnt < NCurrentWalkersPerRank[MPIrank];cnt++){
+
+      if(copyTrial)
+         theWalkers[cnt] = new Walker(theWalkers[0]);
       else{
 
          theWalkers[cnt] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), RN);
@@ -484,7 +564,7 @@ double MPSQMC2::PropagateSeparately(){
             for(int left = 0;left < trotterSVDsize;left++)
                for(int right = 0;right < trotterSVDsize;right++)
                   thePDF[myID][cnt] += theOperatorCombos[myID][left+trotterSVDsize*right] * theGrid->gCoOfPoint(cnt,left) * theGrid->gCoOfPoint(cnt,right);
-            
+
             thePDF[myID][cnt] = max(0.0, thePDF[myID][cnt]);
             thePDF[myID][cnt] *= trotterSVDsize / ( theWalkers[walker]->gOverlap() * theGrid->gNPoints());
 
@@ -657,7 +737,7 @@ double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnerg
    MPI::COMM_WORLD.Allreduce(&projE_denominator, &totalDen, 1, MPI::DOUBLE, MPI::SUM);
    projectedEnergy[0] = totalNum / totalDen;
 #else
-   
+
    //For the fluctuation metric
    double fluctMetric = 0.0;
 

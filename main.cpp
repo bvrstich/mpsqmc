@@ -18,11 +18,13 @@ void RNcheck();
 void MPSQMCcheck();
 void J1J2SquareLattice(const int d, const int L, const double J1, const double J2);
 
-int main(void){
+int main(int argc,char *argv[]){
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Init();
 #endif
+
+   char *filename = argv[1];
 
    cout.precision(15);
 
@@ -38,31 +40,21 @@ int main(void){
 
    Random RN;
 
-   MPSstate Psi0("mps.out",&RN);
+   MPSstate Psi0(filename,&RN);
 
-   cout << Psi0 << endl;
+   GridGenerator theGrid(4);
+   theGrid.FillMarsaglia(4);
 
-   //out << Psi0 << endl;
+   int DT = 4;
+   int DW = 2;
 
-   /*
-   DMRG theSolver(&Psi0, &theMPO);
-   double Energy = theSolver.Solve();
-   cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
-*/
-   /*
-      GridGenerator theGrid(4);
-      theGrid.FillMarsaglia(4);
-
-      int DT = 4;
-      int DW = 2;
    int Nwalkers = 1000;
    double dtau = 0.01;
    int nSteps = 10000;
 
-   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, DT,DW, Nwalkers, dtau);
-
+   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
-*/
+
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
 #endif

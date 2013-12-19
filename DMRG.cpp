@@ -55,7 +55,7 @@ double DMRG::Solve(){
    double EnergyPrevious = 1.0;
    double Energy = 0.0;
    
-   while (fabs(EnergyPrevious-Energy)>1e-12){
+   while (fabs(EnergyPrevious-Energy)>1e-10){
       EnergyPrevious = Energy;
       Energy = sweepleft();
       Energy = sweepright();

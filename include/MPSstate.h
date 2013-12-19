@@ -34,6 +34,8 @@ class MPSstate{
       
       //Get the virtual dimension at boundary i: MPS chain [0 1 2 3] has boundaries [0 1 2 3 4]. Hence tensor i -> left bound i, right bound i+1.
       int gDimAtBound(const int bound) const;
+
+      void printVdim() const;
       
       //Get the size of the local Hilbert space
       int gPhys_d() const;

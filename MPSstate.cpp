@@ -71,15 +71,16 @@ MPSstate::MPSstate(MPSstate * toCopy){
    this->RN = toCopy->gRN();
    
    VirtualD = new int[length+1];
+
    for (int cnt=0; cnt<=length; cnt++){
       VirtualD[cnt] = toCopy->gDimAtBound(cnt);
    }
-   
+
    theTensors = new MPStensor * [length];
-   for (int cnt=0; cnt<length; cnt++){
+
+   for(int cnt=0; cnt<length; cnt++)
       theTensors[cnt] = new MPStensor(toCopy->gMPStensor(cnt));
-   }
-   
+ 
    TwoSiteObjectAllocated = false;
    work1Allocated = false;
    work2Allocated = false;
@@ -118,7 +119,6 @@ MPSstate::MPSstate(const char *filename,Random *RN){
 
    }
 
-
    //allocate the tensors
    TwoSiteObjectAllocated = false;
    work1Allocated = false;
@@ -133,7 +133,7 @@ MPSstate::~MPSstate(){
       delete theTensors[cnt];
    }
    delete [] theTensors;
-   
+
    delete [] VirtualD;
    
    if (TwoSiteObjectAllocated){ delete the2siteObject; }
@@ -394,6 +394,13 @@ void MPSstate::CompressState(const int truncD){
    }
 
    Dtrunc = truncD;
+
+}
+
+void MPSstate::printVdim() const {
+
+   for(int i = 0;i < length + 1;++i)
+      cout << i << "\t" << VirtualD[i] << endl;
 
 }
 

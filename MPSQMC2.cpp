@@ -456,7 +456,9 @@ void MPSQMC2::Walk(const int steps){
 
    if (MPIrank==0){
 
-      ofstream output("energies.txt",ios::trunc);
+      char filename[100];
+      sprintf(filename,"output/Heisenberg1D/ener_L%dDT%dDW%d.txt",theMPO->gLength(),DT,DW);
+      ofstream output(filename,ios::trunc);
       output << "#Step\t\tE_P\t\tE_T\t\tFluctMetric" << endl;
       output.close();
 
@@ -754,7 +756,9 @@ double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnerg
 
 void MPSQMC2::write(const int step,const int nwalkers,const double projectedEnergy, const double targetEnergy, const double fluctMetric){
 
-   ofstream output("energies.txt",ios::app);
+   char filename[100];
+   sprintf(filename,"output/Heisenberg1D/ener_L%dDT%dDW%d.txt",theMPO->gLength(),DT,DW);
+   ofstream output(filename,ios::app);
    output.precision(10);
    output << step << "\t\t" << nwalkers << "\t" << projectedEnergy << "\t\t" << targetEnergy << "\t\t" << fluctMetric << endl;
    output.close();

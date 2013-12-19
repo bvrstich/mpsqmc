@@ -24,11 +24,10 @@ int main(int argc,char *argv[]){
    MPI::Init();
 #endif
 
-   char *filename = argv[1];
-
    cout.precision(15);
 
-   int L = 50;
+   int L = atoi(argv[1]);
+   int D = atoi(argv[2]);
    int d = 2;
 
    HeisenbergMPO theMPO(L,d,false);
@@ -39,6 +38,9 @@ int main(int argc,char *argv[]){
    theMPO.sField(0.0);
 
    Random RN;
+
+   char filename[100];
+   sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,D);
 
    MPSstate Psi0(filename,&RN);
 

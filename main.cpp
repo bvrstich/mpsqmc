@@ -44,8 +44,16 @@ int main(int argc,char *argv[]){
    MPStensor A(D,D,d,&RN);
    MPStensor B(D,D,d,&RN);
 
+   cout << A << endl;
+   cout << B << endl;
+
    TwoSiteObject T(D,D,d);
    T.Compose(&A,&B);
+
+   T.Decompose(&A,&B,D,true,false);
+
+   cout << A << endl;
+   cout << B << endl;
 
 /*
 

@@ -31,9 +31,11 @@ TwoSiteObject::TwoSiteObject(const int DimL, const int DimR, const int phys_d){
    int dimRight = DimR*phys_d;
    SVD_dimMin   = min(dimLeft,dimRight);
    SVD_lwork    = 3*SVD_dimMin*SVD_dimMin + max(max(dimLeft,dimRight),4*SVD_dimMin*SVD_dimMin+4*SVD_dimMin);
+   SVD_lrwork   = 5*SVD_dimMin*SVD_dimMin + 7*SVD_dimMin;
    
    SVD_Svalues = new double[SVD_dimMin];
    SVD_work    = new complex<double> [SVD_lwork];
+   SVD_rwork    = new double [SVD_lrwork];
    SVD_iwork   = new int[SVD_dimMin*8];
 
 }
@@ -48,6 +50,7 @@ TwoSiteObject::~TwoSiteObject(){
    delete [] SVD_Svalues;
    delete [] SVD_work;
    delete [] SVD_iwork;
+   delete [] SVD_rwork;
    
 }
 
@@ -99,6 +102,7 @@ void TwoSiteObject::Compose(MPStensor * MPSleft, MPStensor * MPSright){
    int requiredSpace = MPSleft->gDimL() * MPSright->gDimR() * phys_d * phys_d;
    int requiredDimMin = phys_d * min( MPSleft->gDimL() , MPSright->gDimR() );
    int requiredLWork = 3*requiredDimMin*requiredDimMin + max(phys_d*max(MPSleft->gDimL(),MPSright->gDimR()),4*requiredDimMin*requiredDimMin+4*requiredDimMin);
+   int requiredLRWork = 5*requiredDimMin*requiredDimMin + 7*requiredDimMin;
 
    if(requiredSpace > storageSize){
 
@@ -138,6 +142,16 @@ void TwoSiteObject::Compose(MPStensor * MPSleft, MPStensor * MPSright){
 
    }
 
+   if(requiredLRWork > SVD_lrwork){
+
+      SVD_lrwork = requiredLRWork;
+
+      delete [] SVD_rwork;
+
+      SVD_rwork = new double [SVD_lrwork];
+
+   }
+
    this->DimL = MPSleft->gDimL();
    this->DimR = MPSright->gDimR();
 
@@ -146,7 +160,7 @@ void TwoSiteObject::Compose(MPStensor * MPSleft, MPStensor * MPSright){
    int DimM = MPSleft->gDimR();
    complex<double> alpha(1.0,0.0);
    complex<double> beta(0.0,0.0);
-   
+
    for(int d_left=0; d_left<phys_d; d_left++)
       for(int d_right=0; d_right<phys_d; d_right++)
          zgemm_(&notrans,&notrans,&DimL,&DimR,&DimM,&alpha,MPSleft->gStorage(d_left),&DimL,MPSright->gStorage(d_right),&DimM,&beta,gStorage(d_left,d_right),&DimL);
@@ -154,68 +168,76 @@ void TwoSiteObject::Compose(MPStensor * MPSleft, MPStensor * MPSright){
 }
 
 int TwoSiteObject::Decompose(MPStensor * MPSleft, MPStensor * MPSright, const int Dtrunc, bool movingright, bool possiblyCompress){
-   
-   double * mem = work_large;
-   for (int alpha=0; alpha<DimL; alpha++){
-      for (int i_left=0; i_left<phys_d; i_left++){
-         for (int beta=0; beta<DimR; beta++){
-            for (int i_right=0; i_right<phys_d; i_right++){
+
+   complex<double> * mem = work_large;
+
+   for (int alpha=0; alpha<DimL; alpha++)
+      for (int i_left=0; i_left<phys_d; i_left++)
+         for (int beta=0; beta<DimR; beta++)
+            for (int i_right=0; i_right<phys_d; i_right++)
                mem[alpha + DimL*( i_left + phys_d*( beta + DimR*i_right ))] = gStorage(i_left,i_right)[alpha + DimL*beta];
-            }
-         }
-      }
-   }
-   
+
    int dimLeft = DimL*phys_d;
    int dimRight = DimR*phys_d;
    int dimMin = min(dimLeft,dimRight);
-   
+
    char jobz = 'S';
+
    double * Svalues = SVD_Svalues;
-   double * Uvalues = work_large2;
-   double * VTvalues = work_large3;
-   
+   complex<double> * Uvalues = work_large2;
+   complex<double> * VTvalues = work_large3;
+
    int info;
 
    //dgesdd is not thread-safe in every implementation (intel MKL is safe, Atlas is not safe)
    //#pragma omp critical
-   dgesdd_(&jobz, &dimLeft, &dimRight, mem, &dimLeft, Svalues, Uvalues, &dimLeft, VTvalues, &dimMin, SVD_work, &SVD_lwork, SVD_iwork, &info);
-   
+   zgesdd_(&jobz, &dimLeft, &dimRight, mem, &dimLeft, Svalues, Uvalues, &dimLeft, VTvalues, &dimMin, SVD_work, &SVD_lwork,SVD_rwork, SVD_iwork, &info);
+
    int dimTrunc = Dtrunc;
-   if (possiblyCompress){
+
+   if(possiblyCompress){
+
       int index_trunc = dimMin;
-      for (int cnt=0; cnt<dimMin; cnt++){
+
+      for (int cnt=0; cnt<dimMin; cnt++)
          if (Svalues[cnt]<SchmidtTrunc){
+
             index_trunc = cnt;
             cnt = dimMin;
+
          }
-      }
-      if (index_trunc < dimTrunc){ dimTrunc = index_trunc; }
+
+      if (index_trunc < dimTrunc)
+         dimTrunc = index_trunc;
+
    }
-   
+
    if (dimTrunc != MPSleft->gDimR()){
+
       MPSleft->Reset(DimL,dimTrunc);
       MPSright->Reset(dimTrunc,DimR);
-   }
-   
-   for (int i_phys=0; i_phys<phys_d; i_phys++){
-      double * temp = MPSleft->gStorage(i_phys);
-      for (int alpha=0; alpha<DimL; alpha++){
-         for (int beta=0; beta<dimTrunc; beta++){
-            temp[alpha + DimL*beta] = Uvalues[alpha + DimL*(i_phys + phys_d*beta)] * ((movingright)?1.0:Svalues[beta]);
-         }
-      }
-   }
-   
-   for (int i_phys=0; i_phys<phys_d; i_phys++){
-      double * temp = MPSright->gStorage(i_phys);
-      for (int alpha=0; alpha<dimTrunc; alpha++){
-         for (int beta=0; beta<DimR; beta++){
-            temp[alpha + dimTrunc*beta] = VTvalues[alpha + dimMin*(beta + DimR*i_phys)] * ((movingright)?Svalues[alpha]:1.0);
-         }
-      }
-   }
-   
-   return dimTrunc;
 
+   }
+
+   for(int i_phys=0; i_phys<phys_d; i_phys++){
+
+      complex<double> * temp = MPSleft->gStorage(i_phys);
+
+      for (int alpha=0; alpha<DimL; alpha++)
+         for (int beta=0; beta<dimTrunc; beta++)
+            temp[alpha + DimL*beta] = Uvalues[alpha + DimL*(i_phys + phys_d*beta)] * ((movingright)?1.0:Svalues[beta]);
+
+   }
+
+   for (int i_phys = 0;i_phys<phys_d; i_phys++){
+
+      complex<double> * temp = MPSright->gStorage(i_phys);
+
+      for (int alpha=0; alpha<dimTrunc; alpha++)
+         for (int beta=0; beta<DimR; beta++)
+            temp[alpha + dimTrunc*beta] = VTvalues[alpha + dimMin*(beta + DimR*i_phys)] * ((movingright)?Svalues[alpha]:1.0);
+
+   }
+
+   return dimTrunc;
 }

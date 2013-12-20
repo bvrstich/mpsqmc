@@ -602,8 +602,3 @@ void DMRG::matvec(double * vec, double * resultvec, const int index){
    }
 
 }
-
-
-
-
-

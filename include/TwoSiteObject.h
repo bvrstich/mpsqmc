@@ -73,6 +73,8 @@ class TwoSiteObject{
       int SVD_dimMin;
       int SVD_lwork;
       int * SVD_iwork; //8*SVD_dimMin
+      int SVD_lrwork;
+      double *SVD_rwork; 
       complex<double> * SVD_work; //SVD_lwork
       double *SVD_Svalues; //SVD_dimMin
       

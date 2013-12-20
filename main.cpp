@@ -26,6 +26,7 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
+/*
    int L = atoi(argv[1]);
    int D = atoi(argv[2]);
    int d = 2;
@@ -56,7 +57,7 @@ int main(int argc,char *argv[]){
 
    MPSQMC2 thePopulation(&theMPO, &theGrid, &RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
-
+*/
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
 #endif

@@ -10,7 +10,6 @@
 #include "MPSQMC2.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 15, 2013 */
-
 using namespace std;
 
 /**
@@ -940,4 +939,3 @@ void MPSQMC2::PopulationBalancing(){
 #endif
 
 }
-

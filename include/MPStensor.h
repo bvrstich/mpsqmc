@@ -3,9 +3,11 @@
 
 #include <iostream>
 #include <fstream>
+#include <complex>
 
 using std::ostream;
 using std::ifstream;
+using std::complex;
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 9, 2013 */
 
@@ -84,7 +86,7 @@ class MPStensor{
       //Storage for the MPS variables
       double * storage;
       
-      //Fill storage with random numbers 0 <= val < 1
+      //Fill storage with random complex numbers 0 <= val < 1
       void random();
       
 };

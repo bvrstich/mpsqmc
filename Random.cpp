@@ -35,12 +35,24 @@ Random::Random(){
    for (int cnt=0; cnt<num_omp_threads; cnt++)
       dists[cnt] = new boost::random::uniform_real_distribution<double> (0,1); 
 
+   gauss = new boost::random::normal_distribution<double> * [num_omp_threads];
+
+   for (int cnt=0; cnt<num_omp_threads; cnt++)
+      gauss[cnt] = new boost::random::normal_distribution<double> (0.0,1.0); 
+
 }
 
 Random::~Random(){
 
-   for (int cnt=0; cnt<num_omp_threads; cnt++){ delete dists[cnt]; }
+   for (int cnt=0; cnt<num_omp_threads; cnt++)
+      delete dists[cnt];
+
    delete [] dists;
+
+   for (int cnt=0; cnt<num_omp_threads; cnt++)
+      delete gauss[cnt];
+
+   delete [] gauss;
 
    delete [] gen;
    
@@ -57,6 +69,19 @@ double Random::rand(){
    return (*dists[tid])(gen[tid]);
 
 }
+
+double Random::normal(){
+
+   #ifdef _OPENMP
+      int tid = omp_get_thread_num();
+   #else
+      int tid = 0;
+   #endif
+
+   return (*gauss[tid])(gen[tid]);
+
+}
+
 
 void Random::test(){
 

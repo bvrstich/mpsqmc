@@ -8,6 +8,7 @@
 #include "Random.h"
 #include "MPStensor.h"
 #include "HeisenbergMPO.h"
+#include "TwoSiteObject.h"
 //#include "TrotterHeisenberg.h"
 //#include "GridGenerator.h"
 
@@ -38,8 +39,15 @@ int main(int argc,char *argv[]){
 
    theMPO.sField(0.0);
 
-/*
    Random RN;
+
+   MPStensor A(D,D,d,&RN);
+   MPStensor B(D,D,d,&RN);
+
+   TwoSiteObject T(D,D,d);
+   T.Compose(&A,&B);
+
+/*
 
    char filename[100];
    sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,D);

@@ -129,12 +129,14 @@ class MPSstate{
       TwoSiteObject * the2siteObject;
       
       //For QR etc: workspaces
-      double * work1;
-      double * work2;
-      double * work3;
+      complex<double> * work1;
+      complex<double> * work2;
+      complex<double> * work3;
+
       int sizeWork1;
       int sizeWork2;
       int sizeWork3;
+
       bool work1Allocated;
       bool work2Allocated;
       bool work3Allocated;

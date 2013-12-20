@@ -22,10 +22,10 @@ TwoSiteObject::TwoSiteObject(const int DimL, const int DimR, const int phys_d){
    this->phys_d = phys_d;
    this->storageSize = DimL*DimR*phys_d*phys_d;
    
-   storage = new double[storageSize];
-   work_large = new double[storageSize];
-   work_large2 = new double[storageSize];
-   work_large3 = new double[storageSize];
+   storage = new complex<double> [storageSize];
+   work_large = new complex<double> [storageSize];
+   work_large2 = new complex<double> [storageSize];
+   work_large3 = new complex<double>[storageSize];
    
    int dimLeft  = DimL*phys_d;
    int dimRight = DimR*phys_d;
@@ -33,7 +33,7 @@ TwoSiteObject::TwoSiteObject(const int DimL, const int DimR, const int phys_d){
    SVD_lwork    = 3*SVD_dimMin*SVD_dimMin + max(max(dimLeft,dimRight),4*SVD_dimMin*SVD_dimMin+4*SVD_dimMin);
    
    SVD_Svalues = new double[SVD_dimMin];
-   SVD_work    = new double[SVD_lwork];
+   SVD_work    = new complex<double> [SVD_lwork];
    SVD_iwork   = new int[SVD_dimMin*8];
 
 }
@@ -51,68 +51,105 @@ TwoSiteObject::~TwoSiteObject(){
    
 }
 
-int TwoSiteObject::gDimL() const{ return DimL; }
-
-int TwoSiteObject::gDimR() const{ return DimR; }
-
-int TwoSiteObject::gPhys_d() const{ return phys_d; }
-
-int TwoSiteObject::gStorageSize() const{ return storageSize; }
-
-double * TwoSiteObject::gStorage(const int d_left, const int d_right){
+int TwoSiteObject::gDimL() const{
    
-   if ((d_left<0) || (d_left>=phys_d) || (d_right<0) || (d_right>=phys_d)){ return NULL; }
+   return DimL; 
+   
+}
+
+int TwoSiteObject::gDimR() const{
+   
+   return DimR; 
+   
+}
+
+int TwoSiteObject::gPhys_d() const{
+   
+   return phys_d; 
+   
+}
+
+int TwoSiteObject::gStorageSize() const{
+   
+   return storageSize; 
+   
+}
+
+complex<double> * TwoSiteObject::gStorage(const int d_left, const int d_right){
+   
+   if ((d_left<0) || (d_left>=phys_d) || (d_right<0) || (d_right>=phys_d))
+      return NULL; 
+
    return storage + DimL*DimR*(d_left + phys_d*d_right);
 
 }
 
-double * TwoSiteObject::gStorage(){ return storage; }
+complex<double> * TwoSiteObject::gStorage(){
+   
+   return storage; 
+   
+}
 
 void TwoSiteObject::Compose(MPStensor * MPSleft, MPStensor * MPSright){
 
-   if ((MPSleft->gDimR() != MPSright->gDimL()) || (MPSleft->gPhys_d() != phys_d) || (MPSright->gPhys_d() != phys_d)){ return; }
+   if ((MPSleft->gDimR() != MPSright->gDimL()) || (MPSleft->gPhys_d() != phys_d) || (MPSright->gPhys_d() != phys_d)) 
+      return; 
 
    //Check if the current arrays are long enough
    int requiredSpace = MPSleft->gDimL() * MPSright->gDimR() * phys_d * phys_d;
    int requiredDimMin = phys_d * min( MPSleft->gDimL() , MPSright->gDimR() );
    int requiredLWork = 3*requiredDimMin*requiredDimMin + max(phys_d*max(MPSleft->gDimL(),MPSright->gDimR()),4*requiredDimMin*requiredDimMin+4*requiredDimMin);
-   if (requiredSpace>storageSize){
+
+   if(requiredSpace > storageSize){
+
       storageSize = requiredSpace;
+
       delete [] storage;
       delete [] work_large;
       delete [] work_large2;
       delete [] work_large3;
-      storage = new double[storageSize];
-      work_large = new double[storageSize];
-      work_large2 = new double[storageSize];
-      work_large3 = new double[storageSize];
+
+      storage = new complex<double>[storageSize];
+      work_large = new complex<double>[storageSize];
+      work_large2 = new complex<double>[storageSize];
+      work_large3 = new complex<double>[storageSize];
+      
    }
-   if (requiredDimMin > SVD_dimMin){
+
+   if(requiredDimMin > SVD_dimMin){
+
       SVD_dimMin = requiredDimMin;
+
       delete [] SVD_iwork;
       delete [] SVD_Svalues;
+
       SVD_iwork = new int[8*SVD_dimMin];
       SVD_Svalues = new double[SVD_dimMin];
+
    }
-   if (requiredLWork > SVD_lwork){
+
+   if(requiredLWork > SVD_lwork){
+
       SVD_lwork = requiredLWork;
+
       delete [] SVD_work;
-      SVD_work = new double[SVD_lwork];
+
+      SVD_work = new complex<double> [SVD_lwork];
+
    }
+
    this->DimL = MPSleft->gDimL();
    this->DimR = MPSright->gDimR();
 
    //Do the actual work
    char notrans = 'N';
    int DimM = MPSleft->gDimR();
-   double alpha = 1.0;
-   double beta = 0.0;
+   complex<double> alpha(1.0,0.0);
+   complex<double> beta(0.0,0.0);
    
-   for (int d_left=0; d_left<phys_d; d_left++){
-      for (int d_right=0; d_right<phys_d; d_right++){
-         dgemm_(&notrans,&notrans,&DimL,&DimR,&DimM,&alpha,MPSleft->gStorage(d_left),&DimL,MPSright->gStorage(d_right),&DimM,&beta,gStorage(d_left,d_right),&DimL);
-      }
-   }
+   for(int d_left=0; d_left<phys_d; d_left++)
+      for(int d_right=0; d_right<phys_d; d_right++)
+         zgemm_(&notrans,&notrans,&DimL,&DimR,&DimM,&alpha,MPSleft->gStorage(d_left),&DimL,MPSright->gStorage(d_right),&DimM,&beta,gStorage(d_left,d_right),&DimL);
 
 }
 
@@ -182,6 +219,3 @@ int TwoSiteObject::Decompose(MPStensor * MPSleft, MPStensor * MPSright, const in
    return dimTrunc;
 
 }
-
-
-

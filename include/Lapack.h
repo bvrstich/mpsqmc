@@ -5,13 +5,19 @@
 extern "C" {
 
    void dgeqrf_(int *m,int *n,double *A,int *LDA,double *tau,double *WORK,int *LWORK,int *INFO);
+   void zgeqrf_(int *m,int *n,complex<double> *A,int *LDA,complex<double> *tau,complex<double> *WORK,int *LWORK,int *INFO);
    void dorgqr_(int *m,int *n, int *k,double *A,int  *LDA,double *tau,double *WORK,int *LWORK,int *INFO);
+   void zungqr_(int *m,int *n, int *k,complex<double> *A,int  *LDA,complex<double> *tau,complex<double> *WORK,int *LWORK,int *INFO);
    void dgelqf_(int *m,int *n,double *A,int *LDA,double *tau,double *WORK,int *LWORK,int *INFO);
+   void zgelqf_(int *m,int *n,complex<double> *A,int *LDA,complex<double> *tau,complex<double> *WORK,int *LWORK,int *INFO);
    void dorglq_(int *m,int *n, int *k,double *A,int  *LDA,double *tau,double *WORK,int *LWORK,int *INFO);
+   void zunglq_(int *m,int *n, int *k,complex<double> *A,int  *LDA,complex<double> *tau,complex<double> *WORK,int *LWORK,int *INFO);
    void dcopy_(int *n,double *x,int *incx,double *y,int *incy);
+   void zcopy_(int *n,complex<double> *x,int *incx,complex<double> *y,int *incy);
    void daxpy_(int *n,double *alpha,double *x,int *incx,double *y,int *incy);
    void dscal_(int *n,double *alpha,double *x,int *incx);
    void dgemm_(char *transA,char *transB,int *m,int *n,int *k,double *alpha,double *A,int *lda,double *B,int *ldb,double *beta,double *C,int *ldc);
+   void zgemm_(char *transA,char *transB,int *m,int *n,int *k,complex<double> *alpha,complex<double> *A,int *lda,complex<double> *B,int *ldb,complex<double> *beta,complex<double> *C,int *ldc);
    void dsymm_(char *side,char *uplo,int *m,int *n,double *alpha,double *A,int *lda,double *B,int *ldb,double *beta,double *C,int *ldc);
    void dgemv_(char *trans,int *m,int *n,double *alpha,double *A,int *lda,double *x,int *incx,double *beta,double *y,int *incy);
    void dsymv_(char *uplo, int *n, double *alpha, double *A, int *lda, double *X, int *incx, double *beta, double *Y, int *incy);

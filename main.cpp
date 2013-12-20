@@ -2,13 +2,13 @@
 
 #include <iostream>
 
-#include "HeisenbergMPO.h"
+//#include "HeisenbergMPO.h"
 #include "MPSstate.h"
-#include "DMRG.h"
-#include "MPSQMC2.h"
+//#include "DMRG.h"
+//#include "MPSQMC2.h"
 #include "Random.h"
-#include "TrotterHeisenberg.h"
-#include "GridGenerator.h"
+//#include "TrotterHeisenberg.h"
+//#include "GridGenerator.h"
 
 using namespace std;
 
@@ -26,11 +26,61 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-/*
-   int L = atoi(argv[1]);
-   int D = atoi(argv[2]);
+   int L = 10;
+   int D = 4;
    int d = 2;
 
+   Random RN;
+
+   MPStensor A(D,D,d,&RN);
+
+   complex<double> *tau = new complex<double> [D];
+   complex<double> *work1 = new complex<double> [D];
+   complex<double> *Rmx = new complex<double> [D*D];
+   complex<double> *mem = new complex<double> [d*D*D];
+
+   for(int s = 0;s < d;++s)
+      for(int i = 0;i < D;++i)
+         for(int j = 0;j < D;++j)
+            cout << s << "\t" << i << "\t" << j << "\t|\t" << A(s,i,j) << endl;
+
+   cout << endl;
+   cout << endl;
+
+   A.QR(Rmx,mem,tau,work1);
+
+   for(int s = 0;s < d;++s)
+      for(int i = 0;i < D;++i)
+         for(int j = 0;j < D;++j){
+
+            complex<double> tmp = 0.0;
+
+            for(int k = 0;k < D;++k)
+               tmp += A(s,i,k) * Rmx[k + D*j];
+
+            cout << s << "\t" << i << "\t" << j << "\t|\t" << tmp << endl;
+
+         }
+
+   complex<double> *work2 = new complex<double> [D*D];
+
+   A.RightMultiply(Rmx,work2);
+
+   cout << endl;
+   cout << endl;
+
+   for(int s = 0;s < d;++s)
+      for(int i = 0;i < D;++i)
+         for(int j = 0;j < D;++j)
+            cout << s << "\t" << i << "\t" << j << "\t|\t" << A(s,i,j) << endl;
+
+   delete [] work1;
+   delete [] work2;
+   delete [] mem;
+   delete [] Rmx;
+   delete [] tau;
+
+/*
    HeisenbergMPO theMPO(L,d,false);
 
    for (int cnt = 0;cnt < L-1;cnt++)
@@ -65,7 +115,7 @@ int main(int argc,char *argv[]){
    return 0;
 
 }
-
+/*
 void J1J2SquareLattice(const int d, const int base, const double J1, const double J2){
 
 #ifdef USE_MPI_IN_MPSQMC
@@ -74,7 +124,7 @@ void J1J2SquareLattice(const int d, const int base, const double J1, const doubl
    int rank = 0;
 #endif
 
-   /* The MPO */
+   // The MPO 
    int length = base*base;
    bool useLadder = false;
    HeisenbergMPO theMPO(length,d,useLadder);
@@ -104,7 +154,7 @@ void J1J2SquareLattice(const int d, const int base, const double J1, const doubl
 
    Random RN;
 
-   /* DMRG calculations */
+   // DMRG calculations 
    const bool doDMRG = true;
    if ((rank==0) && (doDMRG)){
       int D = 10;
@@ -114,16 +164,16 @@ void J1J2SquareLattice(const int d, const int base, const double J1, const doubl
       cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
    }
 
-   /*GridGenerator theGrid(4);
-     theGrid.FillMarsaglia(4);*/
+   GridGenerator theGrid(4);
+     theGrid.FillMarsaglia(4);
 
-   /* The MPSQMC */
-   /*int Dtrunc = 2;
+   // The MPSQMC 
+   int Dtrunc = 2;
      int Nwalkers = 1000;
      double dtau = 0.01;
      int nSteps = 10000;
      MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, Dtrunc, Nwalkers, dtau);
-     thePopulation.Walk(nSteps);*/
+     thePopulation.Walk(nSteps);
 
 }
 
@@ -229,8 +279,6 @@ void MPOcheck(){
          cout << test;
       }
 
-      /*****/
-
       for (int geval=0; geval<2; geval++){
          int length = 7;
          int d = 3;
@@ -251,5 +299,4 @@ void MPOcheck(){
    }
 
 }
-
-
+*/

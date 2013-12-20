@@ -19,7 +19,7 @@ MPStensor::MPStensor(const int dimL, const int dimR, const int phys_d, Random * 
    this->phys_d = phys_d;
    this->RN = RN;
    this->storageSize = dimL * dimR * phys_d;
-   storage = new double[storageSize];
+   storage = new complex<double> [storageSize];
    random();
 
 }
@@ -32,9 +32,9 @@ MPStensor::MPStensor(MPStensor * toCopy){
    this->RN = toCopy->gRN();
    this->storageSize = toCopy->gStorageSize();
    
-   storage = new double[storageSize];
+   storage = new complex<double>[storageSize];
    int inc = 1;
-   dcopy_(&storageSize,toCopy->gStorage(),&inc,storage,&inc);
+   zcopy_(&storageSize,toCopy->gStorage(),&inc,storage,&inc);
    
 }
 
@@ -46,7 +46,7 @@ MPStensor::MPStensor(const char *filename,Random *RN){
 
    this->RN = RN;
 
-   storage = new double [storageSize];
+   storage = new complex<double> [storageSize];
 
    for(int i = 0;i < storageSize;++i)
       in >> i >> storage[i];
@@ -57,11 +57,14 @@ void MPStensor::Reset(const int dimL, const int dimR){
 
    this->dimL = dimL;
    this->dimR = dimR;
-   if (dimL*dimR*phys_d > storageSize){
+
+   if(dimL*dimR*phys_d > storageSize){
+
       storageSize = dimL*dimR*phys_d;
       delete [] storage;
-      storage = new double[storageSize];
+      storage = new complex<double>[storageSize];
    }
+
    random();
 
 }
@@ -74,120 +77,162 @@ MPStensor::~MPStensor(){
 
 void MPStensor::random(){
 
-   for (int cnt=0; cnt<storageSize; cnt++){ storage[cnt] = ((RN->rand() < 0.5) ? -1 : 1) * (RN->rand()); }
+   for(int cnt = 0;cnt < storageSize;cnt++)
+      storage[cnt] = complex<double>(RN->rand() - 0.5,RN->rand() - 0.5);
 
 }
 
-int MPStensor::gDimL() const{ return dimL; }
+int MPStensor::gDimL() const {
 
-int MPStensor::gDimR() const{ return dimR; }
+   return dimL; 
 
-int MPStensor::gPhys_d() const{ return phys_d; }
+}
 
-int MPStensor::gStorageSize() const{ return storageSize; }
+int MPStensor::gDimR() const {
+   
+   return dimR; 
+   
+}
 
-double * MPStensor::gStorage(){ return storage; }
+int MPStensor::gPhys_d() const {
+   
+   return phys_d; 
+   
+}
 
-double * MPStensor::gStorage(const int d_val){
+int MPStensor::gStorageSize() const {
+   
+   return storageSize; 
+   
+}
 
-   if ((d_val<0) || (d_val>=phys_d)){ return NULL; }
+complex<double> * MPStensor::gStorage() {
+   
+   return storage; 
+   
+}
+
+
+complex<double> * MPStensor::gStorage(const int d_val){
+
+   if((d_val<0) || (d_val>=phys_d))
+      return NULL; 
+
    return storage + d_val*dimL*dimR;
 
 }
 
-Random * MPStensor::gRN(){ return RN; }
+Random * MPStensor::gRN(){
 
-void MPStensor::QR(double * Rmx, double * mem, double * tau, double * work){
+   return RN; 
+
+}
+
+void MPStensor::QR(complex<double> *Rmx, complex<double> *mem, complex<double> * tau, complex<double> *work){
       
    int m = dimL*phys_d;
    int n = dimR;
    
-   for (int d_val=0; d_val<phys_d; d_val++){
-      for (int irow=0; irow<dimL; irow++){
-         for (int icol=0; icol<dimR; icol++){
+   for(int d_val=0; d_val<phys_d; d_val++)
+      for(int irow=0; irow<dimL; irow++)
+         for(int icol=0; icol<dimR; icol++)
             mem[irow + dimL*(d_val + phys_d * icol)] = storage[irow + dimL * (icol + dimR * d_val)];
-         }
-      }
-   }
-   
+         
    int info;   
-   dgeqrf_(&m,&n,mem,&m,tau,work,&n,&info);
+   zgeqrf_(&m,&n,mem,&m,tau,work,&n,&info);
       
-   for (int irow=0; irow<dimR; irow++){
-      for (int icol=irow; icol<dimR; icol++){
+   for(int irow=0; irow<dimR; irow++){
+
+      for (int icol=irow; icol<dimR; icol++)
          Rmx[irow + dimR*icol] = mem[irow + m*icol];
-      }
-      for (int icol=0; icol<irow; icol++){
+
+     for (int icol=0; icol<irow; icol++)
          Rmx[irow + dimR*icol] = 0.0;
-      }
+      
    }
       
-   dorgqr_(&m,&n,&n,mem,&m,tau,work,&n,&info);
+   zungqr_(&m,&n,&n,mem,&m,tau,work,&n,&info);
    
-   for (int d_val=0; d_val<phys_d; d_val++){
-      for (int irow=0; irow<dimL; irow++){
-         for (int icol=0; icol<dimR; icol++){
+   for(int d_val=0; d_val<phys_d; d_val++)
+      for(int irow=0; irow<dimL; irow++)
+         for(int icol=0; icol<dimR; icol++)
             storage[irow + dimL * (icol + dimR * d_val)] = mem[irow + dimL * (d_val + phys_d * icol)];
-         }
-      }
-   }
 
 }
 
-void MPStensor::LQ(double * Lmx, double * tau, double * work){
+/**
+ * access to the individual numbers in an easy way
+ * @param s physical dim index
+ * @param i virtual row index
+ * @param j virtual column index
+ */
+complex<double> &MPStensor::operator()(int s,int i,int j) const {
+
+   return storage[i + dimL * (j + dimR * s)];
+
+}
+
+void MPStensor::LQ(complex<double> * Lmx, complex<double> * tau, complex<double> * work){
       
    int m = dimL;
    int n = dimR*phys_d;
 
    int info;
       
-   dgelqf_(&m,&n,storage,&m,tau,work,&m,&info);
+   zgelqf_(&m,&n,storage,&m,tau,work,&m,&info);
       
    for (int irow=0; irow<dimL; irow++){
-      for (int icol=0; icol<=irow; icol++){
+
+      for (int icol=0; icol<=irow; icol++)
          Lmx[irow + dimL*icol] = storage[irow + m*icol];
-      }
-      for (int icol=irow+1; icol<dimL; icol++){
+      
+      for (int icol=irow+1; icol<dimL; icol++)
          Lmx[irow + dimL*icol] = 0.0;
-      }
+      
    }
       
-   dorglq_(&m,&n,&m,storage,&m,tau,work,&m,&info);
+   zunglq_(&m,&n,&m,storage,&m,tau,work,&m,&info);
 
 }
 
-void MPStensor::LeftMultiply(double * Lmx, double * work){
+void MPStensor::LeftMultiply(complex<double> * Lmx, complex<double> * work){
 
    int m = dimL;
    int n = dimR;
    int k = dimL;
 
    char notrans = 'N';
-   double alpha = 1.0;
-   double beta = 0.0;
+   complex<double> alpha(1.0,0.0);
+   complex<double> beta(0.0,0.0);
    int dim = m*n;
    int inc = 1;
+
    for (int d_val=0; d_val<phys_d; d_val++){
-      dgemm_(&notrans, &notrans, &m, &n, &k, &alpha, Lmx, &m, gStorage(d_val), &k, &beta, work, &m);
-      dcopy_(&dim, work, &inc, gStorage(d_val), &inc);
+
+      zgemm_(&notrans, &notrans, &m, &n, &k, &alpha, Lmx, &m, gStorage(d_val), &k, &beta, work, &m);
+      zcopy_(&dim, work, &inc, gStorage(d_val), &inc);
+
    }
    
 }
 
-void MPStensor::RightMultiply(double * Rmx, double * work){
+void MPStensor::RightMultiply(complex<double> * Rmx, complex<double> * work){
 
    int m = dimL;
    int n = dimR;
    int k = dimR;
 
    char notrans = 'N';
-   double alpha = 1.0;
-   double beta = 0.0;
+   complex<double> alpha(1.0,0.0);
+   complex<double> beta(0.0,0.0);
    int dim = m*n;
    int inc = 1;
+
    for (int d_val=0; d_val<phys_d; d_val++){
-      dgemm_(&notrans, &notrans, &m, &n, &k, &alpha, gStorage(d_val), &m, Rmx, &k, &beta, work, &m);
-      dcopy_(&dim, work, &inc, gStorage(d_val), &inc);
+
+      zgemm_(&notrans, &notrans, &m, &n, &k, &alpha, gStorage(d_val), &m, Rmx, &k, &beta, work, &m);
+      zcopy_(&dim, work, &inc, gStorage(d_val), &inc);
+
    }
    
 }

@@ -43,25 +43,27 @@ class MPStensor{
       int gStorageSize() const;
       
       //Get the pointer to the total storage
-      double * gStorage();
+      complex<double> * gStorage();
       
       //Get the pointer to the block corresponding to a specific index of the local Hilbert space
-      double * gStorage(const int d_val);
+      complex<double> * gStorage(const int d_val);
+
+      complex<double> &operator()(int s,int i,int j) const;
       
       //Get the random number generator
       Random * gRN();
       
       //Left-normalization
-      void QR(double * Rmx, double * mem, double * tau, double * work);
+      void QR(complex<double> * Rmx, complex<double> * mem, complex<double> * tau, complex<double> * work);
       
       //Right-normalization
-      void LQ(double * Lmx, double * tau, double * work);
+      void LQ(complex<double> * Lmx, complex<double> * tau, complex<double> * work);
       
       //Multiply at the left with Lmx
-      void LeftMultiply(double * Lmx, double * work);
+      void LeftMultiply(complex<double> * Lmx, complex<double> * work);
       
       //Multiply at the right with Rmx
-      void RightMultiply(double * Rmx, double * work);
+      void RightMultiply(complex<double> * Rmx, complex<double> * work);
       
       //Reset the virtual dimensions; the storage is only reset if the required storage size is larger than the current storage size
       void Reset(const int dimL, const int dimR);
@@ -84,7 +86,7 @@ class MPStensor{
       int storageSize;
    
       //Storage for the MPS variables
-      double * storage;
+      complex<double> * storage;
       
       //Fill storage with random complex numbers 0 <= val < 1
       void random();

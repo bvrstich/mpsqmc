@@ -16,7 +16,7 @@ class Op0 : public Operator{
       ~Op0();
       
       //Get an element
-      double operator()(const int i, const int j) const;
+      complex<double> operator()(const int i, const int j) const;
       
       //Am I the zero operator
       bool AmIOp0() const{ return true; }

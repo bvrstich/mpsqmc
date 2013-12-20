@@ -2,11 +2,12 @@
 
 #include <iostream>
 
-//#include "HeisenbergMPO.h"
-#include "MPSstate.h"
+//#include "MPSstate.h"
 //#include "DMRG.h"
 //#include "MPSQMC2.h"
 #include "Random.h"
+#include "MPStensor.h"
+#include "HeisenbergMPO.h"
 //#include "TrotterHeisenberg.h"
 //#include "GridGenerator.h"
 
@@ -30,64 +31,14 @@ int main(int argc,char *argv[]){
    int D = 4;
    int d = 2;
 
-   Random RN;
-
-   MPStensor A(D,D,d,&RN);
-
-   complex<double> *tau = new complex<double> [D];
-   complex<double> *work1 = new complex<double> [D];
-   complex<double> *Rmx = new complex<double> [D*D];
-   complex<double> *mem = new complex<double> [d*D*D];
-
-   for(int s = 0;s < d;++s)
-      for(int i = 0;i < D;++i)
-         for(int j = 0;j < D;++j)
-            cout << s << "\t" << i << "\t" << j << "\t|\t" << A(s,i,j) << endl;
-
-   cout << endl;
-   cout << endl;
-
-   A.QR(Rmx,mem,tau,work1);
-
-   for(int s = 0;s < d;++s)
-      for(int i = 0;i < D;++i)
-         for(int j = 0;j < D;++j){
-
-            complex<double> tmp = 0.0;
-
-            for(int k = 0;k < D;++k)
-               tmp += A(s,i,k) * Rmx[k + D*j];
-
-            cout << s << "\t" << i << "\t" << j << "\t|\t" << tmp << endl;
-
-         }
-
-   complex<double> *work2 = new complex<double> [D*D];
-
-   A.RightMultiply(Rmx,work2);
-
-   cout << endl;
-   cout << endl;
-
-   for(int s = 0;s < d;++s)
-      for(int i = 0;i < D;++i)
-         for(int j = 0;j < D;++j)
-            cout << s << "\t" << i << "\t" << j << "\t|\t" << A(s,i,j) << endl;
-
-   delete [] work1;
-   delete [] work2;
-   delete [] mem;
-   delete [] Rmx;
-   delete [] tau;
-
-/*
-   HeisenbergMPO theMPO(L,d,false);
+   HeisenbergMPO theMPO(L,d);
 
    for (int cnt = 0;cnt < L-1;cnt++)
       theMPO.sCoupling(cnt,cnt+1,1.0);
 
    theMPO.sField(0.0);
 
+/*
    Random RN;
 
    char filename[100];

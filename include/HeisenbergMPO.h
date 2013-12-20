@@ -8,10 +8,8 @@
 #include "Op0.h"
 #include "OpI.h"
 #include "OpSx.h"
-#include "OpISy.h"
+#include "OpSy.h"
 #include "OpSz.h"
-#include "OpSup.h"
-#include "OpSdown.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 29, 2013 */
 
@@ -22,7 +20,7 @@ class HeisenbergMPO : public MPO{
    public:
    
       //Constructor
-      HeisenbergMPO(const int length, const int phys_d, const bool useLadder);
+      HeisenbergMPO(const int length, const int phys_d);
       
       //Destructor
       ~HeisenbergMPO();
@@ -60,13 +58,7 @@ class HeisenbergMPO : public MPO{
       //Print its contents
       friend ostream& operator<<(ostream& os, const HeisenbergMPO& theMPO);
       
-      //For the current filled in values of MinusH and couplingMatrix, find the non-zero contributions
-      void findNonZeroContributions();
-      
    private:
-   
-      //Whether to use ladder operators (S^+ S^- S^z) or the cartesian components (S^x i*S^y S^z)
-      bool useLadder;
    
       //Value of zero
       double fZero;
@@ -84,27 +76,19 @@ class HeisenbergMPO : public MPO{
       OpSx * opSx;
       
       //Operator i*S^y
-      OpISy * opISy;
+      OpSy * opSy;
       
       //Operator S^z
       OpSz * opSz;
-      
-      //Operator S^+/sqrt(2)
-      OpSup * opSplus;
-      
-      //Operator S^-/sqrt(2)
-      OpSdown * opSminus;
       
       //Minus the magnetic field --> -h of [- h \sum S^z_i]
       double MinusH;
       
       //The coupling matrix --> Jij of [\sum_ij J_ij \vec{S}_i . \vec{S}_j]
       double * couplingMatrix;
-      double * minusCouplingMatrix;
       
       //Same as before, but now the pointer to where the variable is stored --> allows for later changes to have influence on the MPO
       double * gCouplingPointer(const int i, const int j);
-      double * gMinusCouplingPointer(const int i, const int j);
       
 };
 

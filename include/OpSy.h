@@ -1,22 +1,22 @@
-#ifndef OPSUP_H
-#define OPSUP_H
+#ifndef OPISY_H
+#define OPISY_H
 
 #include "Operator.h"
 
-/*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 29, 2013 */
+/*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 10, 2013 */
 
-class OpSup : public Operator{
+class OpSy : public Operator{
 
    public:
    
       //Constructor
-      OpSup(const int phys_d);
+      OpSy(const int phys_d);
       
       //Destructor
-      ~OpSup();
+      ~OpSy();
       
       //Get an element
-      double operator()(const int i, const int j) const;
+      complex<double> operator()(const int i, const int j) const;
       
       //Am I the zero operator
       bool AmIOp0() const{ return false; }

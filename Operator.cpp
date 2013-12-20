@@ -23,5 +23,8 @@ ostream& operator<<(ostream& os, const Operator& theOp){
    
 }
 
-int Operator::gPhys_d() const{ return phys_d; }
+int Operator::gPhys_d() const {
 
+   return phys_d; 
+
+}

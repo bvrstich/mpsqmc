@@ -10,11 +10,11 @@ OpI::OpI(const int phys_d) : Operator(){
 
 OpI::~OpI(){ }
 
-double OpI::operator()(const int i, const int j) const{
+complex<double> OpI::operator()(const int i, const int j) const{
 
    if ((i!=j) || (i>phys_d) || (i<0))
-      return 0.0; 
+      return complex<double>(0.0,0.0); 
 
-   return 1.0;
+   return complex<double>(1.0,0.0);
 
 }

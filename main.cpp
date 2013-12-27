@@ -16,7 +16,7 @@ void MPOcheck();
 void DMRGcheck();
 void RNcheck();
 void MPSQMCcheck();
-void J1J2SquareLattice(const int d, const int L, const double J1, const double J2);
+void J1J2SquareLattice(const int d, const int L,int D, const double J1, const double J2);
 
 int main(int argc,char *argv[]){
 
@@ -30,32 +30,7 @@ int main(int argc,char *argv[]){
    int D = atoi(argv[2]);
    int d = 2;
 
-   HeisenbergMPO theMPO(L,d,false);
-
-   for (int cnt = 0;cnt < L-1;cnt++)
-      theMPO.sCoupling(cnt,cnt+1,1.0);
-
-   theMPO.sField(0.0);
-
-   Random RN;
-
-   char filename[100];
-   sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,D);
-
-   MPSstate Psi0(filename,&RN);
-
-   GridGenerator theGrid(4);
-   theGrid.FillMarsaglia(4);
-
-   int DT = 4;
-   int DW = 2;
-
-   int Nwalkers = 1000;
-   double dtau = 0.01;
-   int nSteps = 10000;
-
-   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN,&Psi0,DW, Nwalkers, dtau);
-   thePopulation.Walk(nSteps);
+   J1J2SquareLattice(d,L,D,1.0,0.0);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
@@ -65,7 +40,7 @@ int main(int argc,char *argv[]){
 
 }
 
-void J1J2SquareLattice(const int d, const int base, const double J1, const double J2){
+void J1J2SquareLattice(const int d, const int base,int D, const double J1, const double J2){
 
 #ifdef USE_MPI_IN_MPSQMC
    int rank = MPI::COMM_WORLD.Get_rank();
@@ -106,13 +81,21 @@ void J1J2SquareLattice(const int d, const int base, const double J1, const doubl
    /* DMRG calculations */
    const bool doDMRG = true;
    if ((rank==0) && (doDMRG)){
-      int D = 10;
       MPSstate Psi0(length, D, d, &RN);
       DMRG theSolver(&Psi0, &theMPO);
       double Energy = theSolver.Solve();
       cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
-   }
 
+      char filename[100];
+
+      sprintf(filename,"input/Heisenberg2D/L%dD%d.mps",base,D);
+
+      ofstream out(filename);
+      out.precision(15);
+
+      out << Psi0 << endl;
+
+   }
    /*GridGenerator theGrid(4);
      theGrid.FillMarsaglia(4);*/
 

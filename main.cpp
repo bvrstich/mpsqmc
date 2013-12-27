@@ -27,10 +27,33 @@ int main(int argc,char *argv[]){
    cout.precision(15);
 
    int L = atoi(argv[1]);
-   int D = atoi(argv[2]);
+   int DT = atoi(argv[2]);
+   int DW = atoi(argv[3]);
    int d = 2;
 
-   J1J2SquareLattice(d,L,D,1.0,0.0);
+   bool useLadder = false;
+
+   HeisenbergMPO theMPO(L,d,useLadder);
+
+   for (int cnt=0; cnt<L-1; cnt++)
+      theMPO.sCoupling(cnt,cnt+1,1.0);
+
+   theMPO.sField(0.0);
+
+   Random RN;
+
+   char filename[100];
+   sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,DT);
+   MPSstate Psi0(filename,&RN);
+
+   GridGenerator theGrid(4);
+   theGrid.FillMarsaglia(4);
+
+   int Nwalkers = 1000;
+   double dtau = 0.01;
+   int nSteps = 10000;
+   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, &Psi0,DW, Nwalkers, dtau);
+   thePopulation.Walk(nSteps);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

@@ -15,6 +15,8 @@ using std::complex;
 
 class TwoSiteObject{
 
+   friend ostream &operator<<(ostream &output,const TwoSiteObject &tso);
+
    public:
    
       //Constructor

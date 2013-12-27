@@ -229,7 +229,7 @@ int TwoSiteObject::Decompose(MPStensor * MPSleft, MPStensor * MPSright, const in
 
    }
 
-   for (int i_phys = 0;i_phys<phys_d; i_phys++){
+   for(int i_phys = 0;i_phys<phys_d; i_phys++){
 
       complex<double> * temp = MPSright->gStorage(i_phys);
 
@@ -240,4 +240,13 @@ int TwoSiteObject::Decompose(MPStensor * MPSleft, MPStensor * MPSright, const in
    }
 
    return dimTrunc;
+}
+
+ostream &operator<<(ostream &output,const TwoSiteObject &tso){
+
+   for(int i = 0;i < tso.storageSize;++i)
+      output << i << "\t" << tso.storage[i] << endl;
+
+   return output;
+
 }

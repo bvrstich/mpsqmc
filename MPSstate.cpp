@@ -90,7 +90,7 @@ MPSstate::MPSstate(MPSstate * toCopy){
 
 }
 
-//construct from file
+//construct from file: read in REAL numbers!
 MPSstate::MPSstate(const char *filename,Random *RN){
 
    ifstream in(filename);
@@ -116,8 +116,15 @@ MPSstate::MPSstate(const char *filename,Random *RN){
 
       in >> i >> storsize;
 
-      for(int j = 0;j < storsize;++j)
-         in >> i >> j >> theTensors[i]->gStorage()[j];
+      for(int j = 0;j < storsize;++j){
+
+         double value;
+
+         in >> i >> j >> value;
+
+         theTensors[i]->gStorage()[j] = complex<double>(value,0.0);
+
+      }
 
    }
 

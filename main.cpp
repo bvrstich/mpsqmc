@@ -2,14 +2,13 @@
 
 #include <iostream>
 
-//#include "DMRG.h"
-//#include "MPSQMC2.h"
 #include "Random.h"
 #include "MPStensor.h"
 #include "HeisenbergMPO.h"
 #include "TwoSiteObject.h"
 #include "MPSstate.h"
 //#include "TrotterHeisenberg.h"
+//#include "MPSQMC2.h"
 //#include "GridGenerator.h"
 
 using namespace std;
@@ -29,7 +28,7 @@ int main(int argc,char *argv[]){
    cout.precision(15);
 
    int L = 10;
-   int D = 4;
+   int D = 8;
    int d = 2;
 
    HeisenbergMPO theMPO(L,d);
@@ -41,10 +40,12 @@ int main(int argc,char *argv[]){
 
    Random RN;
 
-   MPSstate A(L,D,d,&RN);
+   MPSstate A("test.mps",&RN);
    MPSstate B(L,D,d,&RN);
 
    B.ApplyMPO(&theMPO,&A);
+   cout << B.InnerProduct(&B) << endl;
+
 
 /*
 

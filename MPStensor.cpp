@@ -38,7 +38,7 @@ MPStensor::MPStensor(MPStensor * toCopy){
    
 }
 
-//construct from file
+//construct from file: read in REAL numbers!
 MPStensor::MPStensor(const char *filename,Random *RN){
 
    ifstream in(filename);
@@ -48,8 +48,15 @@ MPStensor::MPStensor(const char *filename,Random *RN){
 
    storage = new complex<double> [storageSize];
 
-   for(int i = 0;i < storageSize;++i)
-      in >> i >> storage[i];
+   for(int i = 0;i < storageSize;++i){
+
+      double value;
+
+      in >> i >> value;
+      
+      storage[i] = complex<double>(value,0.0);
+
+   }
 
 }
 

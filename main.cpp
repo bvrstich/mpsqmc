@@ -41,19 +41,18 @@ int main(int argc,char *argv[]){
    theMPO.sField(0.0);
 
    Random RN;
+   
+   MPSstate Psi0(L, DT, d, &RN);
+   DMRG theSolver(&Psi0, &theMPO);
+   double Energy = theSolver.Solve();
+   cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
 
-   char filename[100];
-   sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,DT);
-   MPSstate Psi0(filename,&RN);
+   ofstream out("test.mps");
+   out.precision(15);
 
-   GridGenerator theGrid(4);
-   theGrid.FillMarsaglia(4);
+   out << Psi0 << endl;
 
-   int Nwalkers = 1000;
-   double dtau = 0.01;
-   int nSteps = 10000;
-   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN, &Psi0,DW, Nwalkers, dtau);
-   thePopulation.Walk(nSteps);
+   cout << Psi0.InnerProduct(&Psi0) << endl;
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

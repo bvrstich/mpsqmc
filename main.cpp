@@ -36,17 +36,18 @@ int main(int argc,char *argv[]){
    HeisenbergMPO theMPO(L,d,useLadder);
 
    for (int cnt=0; cnt<L-1; cnt++)
-      theMPO.sCoupling(cnt,cnt+1,1.0);
+      theMPO.sCoupling(cnt,cnt+1,0.0);
 
-   theMPO.sField(0.0);
+   theMPO.sField(1.0);
 
    Random RN;
    
    MPSstate Psi0(L, DT, d, &RN);
+   /*
    DMRG theSolver(&Psi0, &theMPO);
    double Energy = theSolver.Solve();
    cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
-
+*/
    ofstream out("test.mps");
    out.precision(15);
    out << Psi0;
@@ -58,7 +59,7 @@ int main(int argc,char *argv[]){
    HPsi0.ApplyMPO(&theMPO,&Psi0);
 
    cout << HPsi0 << endl;
-   cout << HPsi0.InnerProduct(&Psi0) << endl;
+   cout << HPsi0.InnerProduct(&HPsi0) << endl;
 
 
 #ifdef USE_MPI_IN_MPSQMC

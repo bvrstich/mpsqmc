@@ -47,12 +47,15 @@ int main(int argc,char *argv[]){
    double Energy = theSolver.Solve();
    cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
 
-   ofstream out("test.mps");
-   out.precision(15);
+   cout << endl;
+   cout << endl;
 
-   out << Psi0 << endl;
+   MPSstate HPsi0(L, DT, d, &RN);
+   HPsi0.ApplyMPO(&theMPO,&Psi0);
 
-   cout << Psi0.InnerProduct(&Psi0) << endl;
+   cout << HPsi0 << endl;
+   cout << HPsi0.InnerProduct(&Psi0) << endl;
+
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

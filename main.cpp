@@ -34,24 +34,25 @@ int main(int argc,char *argv[]){
    HeisenbergMPO theMPO(L,d);
 
    for (int cnt = 0;cnt < L-1;cnt++)
-      theMPO.sCoupling(cnt,cnt+1,1.0);
+      theMPO.sCoupling(cnt,cnt+1,0.0);
 
    theMPO.sField(1.0);
 
+   cout << theMPO << endl;
+/*
    Random RN;
 
-   MPSstate A(L,D,d,&RN);
+   MPSstate A("test.mps",&RN);
+   cout << A << endl;
 
    MPSstate B(L,D,d,&RN);
-
-   cout << B.InnerProduct(&B) << endl;
 
    B.ApplyMPO(&theMPO,&A);
 
    cout << B << endl;
 
    cout << B.InnerProduct(&B) << endl;
-
+*/
 
 /*
 

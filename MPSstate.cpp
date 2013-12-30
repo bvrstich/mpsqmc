@@ -479,33 +479,42 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
    }//loop over sites
 
 }
-/*
+
 void MPSstate::ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter){
 
    if (theTrotter->gIsMagneticField()){
+
       for (int site=0; site<length; site++){
 
          int sizeBlock = VirtualD[site] * VirtualD[site+1];
          int size = sizeBlock * phys_d;
          checkWork1(size);
-         for (int cnt=0; cnt<size; cnt++){ work1[cnt] = 0.0; }
-         for (int phys_up=0; phys_up<phys_d; phys_up++){
+
+         for (int cnt=0; cnt<size; cnt++)
+            work1[cnt] = 0.0;
+
+         for (int phys_up=0; phys_up<phys_d; phys_up++)
             for (int phys_down=0; phys_down<phys_d; phys_down++){
-               double OperatorValue = theTrotter->gSingleSiteProp( phys_up, phys_down);
-               if (OperatorValue!=0.0){
+
+               complex<double> OperatorValue = theTrotter->gSingleSiteProp( phys_up, phys_down);
+
+               if (std::abs(OperatorValue) > 1.0e-15){
+
                   int inc = 1;
-                  daxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, work1 + phys_up*sizeBlock, &inc);
+                  zaxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, work1 + phys_up*sizeBlock, &inc);
+
                }
+
             }
-         }
+
          int inc = 1;
-         dcopy_(&size, work1, &inc, theTensors[site]->gStorage(), &inc);
+         zcopy_(&size, work1, &inc, theTensors[site]->gStorage(), &inc);
 
       }
    }
 
 }
-*/
+
 ostream &operator<<(ostream &output,MPSstate &mps){
 
    //first print the essentials

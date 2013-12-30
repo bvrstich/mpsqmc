@@ -40,22 +40,7 @@ int main(int argc,char *argv[]){
 
    Random RN;
 
-   MPSstate A("test.mps",&RN);
-
-   cout << A.InnerProduct(&A) << endl;
-   cout << endl;
-   cout << endl;
-
    MPSstate B(L,D,d,&RN);
-
-   B.ApplyMPO(&theMPO,&A);
-
-   cout << endl;
-   cout << B.InnerProduct(&B) << endl;
-   cout << endl;
-   cout << A.InnerProduct(&B) << endl;
-   cout << B.InnerProduct(&A) << endl;
-
 
 /*
 

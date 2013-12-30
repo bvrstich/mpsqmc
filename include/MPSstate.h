@@ -12,8 +12,7 @@ using std::complex;
 #include "MPStensor.h"
 #include "MPO.h"
 #include "TwoSiteObject.h"
-//#include "TrotterHeisenberg.h"
-//#include "GridGenerator.h"
+#include "TrotterHeisenberg.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 9, 2013 */
 
@@ -82,11 +81,8 @@ class MPSstate{
       //Do H * Psi0 and store in this object
       void ApplyMPO(MPO * theMPO, MPSstate * Psi0);
       
-      //Apply a specific non-zero term of the MPO to this wfn
-      void ApplyMPOterm(MPO * theMPO, const int SelectedTerm);
-      
       //Apply the single-site Trotter term on each site
-      //void ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter);
+      void ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter);
       
       //Check whether the work arrays are allocated with at least size size
       void checkWork1(const int size);

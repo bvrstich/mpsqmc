@@ -15,6 +15,7 @@ extern "C" {
    void dcopy_(int *n,double *x,int *incx,double *y,int *incy);
    void zcopy_(int *n,complex<double> *x,int *incx,complex<double> *y,int *incy);
    void daxpy_(int *n,double *alpha,double *x,int *incx,double *y,int *incy);
+   void zaxpy_(int *n,complex<double> *alpha,complex<double> *x,int *incx,complex<double> *y,int *incy);
    void dscal_(int *n,double *alpha,double *x,int *incx);
    void zscal_(int *n,complex<double> *alpha,complex<double> *x,int *incx);
    void dgemm_(char *transA,char *transB,int *m,int *n,int *k,double *alpha,double *A,int *lda,double *B,int *ldb,double *beta,double *C,int *ldc);

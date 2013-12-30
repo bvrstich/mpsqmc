@@ -27,8 +27,8 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-   int L = 4;
-   int D = 4;
+   int L = 10;
+   int D = 8;
    int d = 2;
 
    HeisenbergMPO theMPO(L,d);
@@ -52,6 +52,9 @@ int main(int argc,char *argv[]){
 
    cout << endl;
    cout << B.InnerProduct(&B) << endl;
+   cout << endl;
+   cout << A.InnerProduct(&B) << endl;
+   cout << B.InnerProduct(&A) << endl;
 
 
 /*

@@ -427,7 +427,7 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
       
       for (int MPOleft = 0; MPOleft < dimLmpo; MPOleft++)
          for (int MPOright = 0; MPOright < dimRmpo; MPOright++){
-         
+
             Operator * theOp = theMPO->gOperator(site,MPOleft,MPOright);
 
             if (!(theOp->AmIOp0())){
@@ -451,12 +451,11 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
                   }
                   else{
 
-
                      for(int phys_down = 0;phys_down < phys_d;phys_down++){//loop over the lower physical index of the MPO: this will be contracted with the phys index of the original MPStensor
 
                         const complex<double> factorbis = factor * (*theOp)(phys_up,phys_down);
 
-                        if(std::abs(factorbis) < 1.0e-15){
+                        if(std::abs(factorbis) > 1.0e-15){
 
                            complex<double> * source = Psi0->gMPStensor(site)->gStorage(phys_down);
 
@@ -478,7 +477,6 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
          }//mpo left right loop
 
    }//loop over sites
-
 
 }
 /*

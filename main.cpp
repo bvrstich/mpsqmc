@@ -2,13 +2,13 @@
 
 #include <iostream>
 
-//#include "MPSstate.h"
 //#include "DMRG.h"
 //#include "MPSQMC2.h"
 #include "Random.h"
 #include "MPStensor.h"
 #include "HeisenbergMPO.h"
 #include "TwoSiteObject.h"
+#include "MPSstate.h"
 //#include "TrotterHeisenberg.h"
 //#include "GridGenerator.h"
 
@@ -41,22 +41,10 @@ int main(int argc,char *argv[]){
 
    Random RN;
 
-   MPStensor A(D,D,d,&RN);
-   MPStensor B(D,D,d,&RN);
+   MPSstate A(L,D,d,&RN);
+   MPSstate B(L,D,d,&RN);
 
-   TwoSiteObject T(D,D,d);
-   T.Compose(&A,&B);
-
-   cout << T << endl;
-
-   T.Decompose(&A,&B,D,true,false);
-
-   TwoSiteObject T_bis(D,D,d);
-   T_bis.Compose(&A,&B);
-
-   ofstream out("bis");
-   out.precision(15);
-   out << T_bis << endl;
+   B.ApplyMPO(&theMPO,&A);
 
 /*
 

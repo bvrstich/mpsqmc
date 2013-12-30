@@ -1,11 +1,19 @@
 #ifndef MPSSTATE_H
 #define MPSSTATE_H
 
+#include <iostream>
+#include <fstream>
+#include <complex>
+
+using std::ostream;
+using std::ifstream;
+using std::complex;
+
 #include "MPStensor.h"
 #include "MPO.h"
 #include "TwoSiteObject.h"
-#include "TrotterHeisenberg.h"
-#include "GridGenerator.h"
+//#include "TrotterHeisenberg.h"
+//#include "GridGenerator.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 9, 2013 */
 
@@ -50,28 +58,26 @@ class MPSstate{
       Random * gRN();
       
       //Left-normalize the whole chain, return the norm
-      double LeftNormalize();
+      complex<double> LeftNormalize();
       
       //Right-normalize the whole chain, return the norm
-      double RightNormalize();
+      complex<double> RightNormalize();
       
       //Calculate the overlap
-      double InnerProduct(MPSstate * OtherState);
+      complex<double> InnerProduct(MPSstate * OtherState);
       
       //Multiply with a scalar
-      void ScalarMultiplication(const double factor);
-      
-      //Together with CompressState and ScalarMultiplication, this provides the functionality for imaginary time evolution
-      void ResetContentsAndStoreSumOf(MPSstate * state1, MPSstate * state2);
-      
-      //Change the phase
-      void ChangePhase();
+      void ScalarMultiplication(const complex<double> factor);
       
       //Compress the state so that max. truncD virtual states remain.
       void CompressState(const int truncD);
       
       //Compress lossless
-      void CompressState(){ CompressState(Dtrunc); }
+      void CompressState(){
+
+         CompressState(Dtrunc);
+
+      }
       
       //Do H * Psi0 and store in this object
       void ApplyMPO(MPO * theMPO, MPSstate * Psi0);
@@ -79,17 +85,8 @@ class MPSstate{
       //Apply a specific non-zero term of the MPO to this wfn
       void ApplyMPOterm(MPO * theMPO, const int SelectedTerm);
       
-      //Apply the hermitian conjugate of a specific non-zero term of the MPO to this wfn
-      void ApplyMPOtermHC(MPO * theMPO, const int SelectedTerm){ ApplyMPOterm(theMPO, theMPO->gRN_HCfriend(SelectedTerm)); }
-      
-      //Apply a particular two-site Trotter term
-      void ApplyTwoSiteTrotterTerm(TrotterHeisenberg * theTrotter, const int firstSite, const int secondSite, const int leftSVDindex, const int rightSVDindex, const bool doHC = false);
-      
-      //Apply a particular two-site Trotter term
-      void ApplyTwoSiteTrotterTerm(TrotterHeisenberg * theTrotter, const int firstSite, const int secondSite, GridGenerator * theGrid, const int gridPoint);
-      
       //Apply the single-site Trotter term on each site
-      void ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter);
+      //void ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter);
       
       //Check whether the work arrays are allocated with at least size size
       void checkWork1(const int size);
@@ -97,10 +94,23 @@ class MPSstate{
       void checkWork3(const int size);
       
       //Get pointer to the work arrays
-      double * gWork1(){ return work1; }
-      double * gWork2(){ return work2; }
-      double * gWork3(){ return work3; }
-      
+      complex<double> * gWork1(){
+         
+         return work1; 
+         
+      }
+
+      complex<double> * gWork2(){
+         
+         return work2; 
+         
+      }
+
+      complex<double> * gWork3(){
+         
+         return work3; 
+         
+      }
       
    private:
    
@@ -144,4 +154,3 @@ class MPSstate{
 };
 
 #endif
-

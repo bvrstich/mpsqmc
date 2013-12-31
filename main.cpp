@@ -36,11 +36,9 @@ int main(int argc,char *argv[]){
    for (int cnt = 0;cnt < L-1;cnt++)
       theMPO.sCoupling(cnt,cnt+1,1.0);
 
-   theMPO.sField(1.0);
+   theMPO.sField(0.0);
 
-   Random RN;
-
-   MPSstate B(L,D,d,&RN);
+   TrotterHeisenberg(&theMPO,0.01);
 
 /*
 

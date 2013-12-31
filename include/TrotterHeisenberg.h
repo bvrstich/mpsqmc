@@ -65,6 +65,8 @@ class TrotterHeisenberg{
       //If there is a magnetic field: construct single site propagator exp^{theField * dtau * S^z / 2}
       complex<double> *SingleSitePropagator;
       
+      double *couplingEig;
+      
 };
 
 #endif

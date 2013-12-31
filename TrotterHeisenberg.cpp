@@ -29,17 +29,53 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    theSy = new OpSy(phys_d);
 
    //The couplings, and the different couplings
-   couplingMx = new double [(length * (length - 1))/2];
+   couplingMx = new double [length * length];
 
-   for(int first = 0;first < length;first++)
-      for(int second = first + 1;second < length;second++){
+   for(int i = 0;i < length;i++){
 
-         double theCoupling = theMPO->gCoupling(first,second);
+      couplingMx[ i*length + i ] = 0.0;
+
+      for(int j = i + 1;j < length;j++){
+
+         double theCoupling = theMPO->gCoupling(i,j);
 
          //couplingmatrix will contain the coupling J_[ij]
-         couplingMx[ (second*(second-1))/2 + first ] = theCoupling;
+         couplingMx[ j*length + i ] = theCoupling;
+         couplingMx[ i*length + j ] = theCoupling;
 
       }
+
+   }
+
+   //diagonalize the couplingmatrix
+   char jobz = 'V';
+   char uplo = 'U';
+
+   couplingEig = new double [length];
+
+   int lwork = 3*length - 1;
+   double * work = new double [lwork];
+   int info;
+
+   dsyev_(&jobz,&uplo,&length,couplingMx,&length,couplingEig,work,&lwork,&info);
+
+   delete [] work;
+
+   for(int i = 0;i < length;++i)
+      for(int j = 0;j < length;++j){
+
+         double tmp = 0.0;
+
+         for(int k = 0;k < length;++k)
+            tmp += couplingEig[k] * couplingMx[k*length + i] * couplingMx[k*length + j];
+
+         if(fabs(tmp) < 1.0e-14)
+            tmp = 0.0;
+
+         cout << i << "\t" << j << "\t" << tmp << endl;
+
+      }
+
 
    //The magnetic field and single-site propagator
    this->theField = theMPO->gField();
@@ -65,6 +101,7 @@ TrotterHeisenberg::~TrotterHeisenberg(){
    delete theSy;
 
    delete [] couplingMx;
+   delete [] couplingEig;
 
    if (isMagneticField)
       delete [] SingleSitePropagator;
@@ -93,10 +130,7 @@ double TrotterHeisenberg::gCoupling(const int i, const int j) const {
 
    }
 
-   if(i < j)
-      return couplingMx[ (j*(j-1))/2 + i ]; 
-
-   return couplingMx[ (i*(i-1))/2 + j ];
+   return couplingMx[ j*length + i ]; 
 
 }
 

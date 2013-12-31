@@ -10,12 +10,12 @@ class Walker{
    public:
    
       //Constructor copying an MPSstate
-      Walker(MPSstate * theState, const double overlap, const double weight, const double energyHistory);
+      Walker(MPSstate * theState, const complex<double> overlap, const double weight);
       
       //Constructor copying an entire Walker
       Walker(Walker * theWalker);
       
-      //Constructor creating a random MPSstate, with weight 1, overlap NAN, and energy history 0
+      //Constructor creating a random MPSstate, with weight 1, overlap NAN
       Walker(const int length, const int Dtrunc, const int phys_d, Random * RN);
       
       //Destructor
@@ -25,46 +25,39 @@ class Walker{
       double gWeight() const;
       
       //Return the walker overlap
-      double gOverlap() const;
-
-      //Return the energy history
-      double gEnergyHistory() const;
+      complex<double> gOverlap() const;
 
       //Return the pointer to the MPSstate
       MPSstate * gState();
 
       //Set the walker weight
-      void setWeight(const double weight);
+      void sWeight(const double weight);
 
       //Multiply factor into the walker weight
-      void multiplyWeight(const double factor);
+      void multWeight(const double factor);
       
       //Set the overlap with the trial wfn
-      void setOverlap(MPSstate * theTrial);
+      void sOverlap(MPSstate *Psi0);
 
-      //Set the energy history
-      void setEnergyHistory(const double energyHistory);
-
-      //Add a term to the energyHistory
-      void addEnergyToHistory(const double term);
-      
-      //Calculate the walker's individual projected energy. Note that setOverlap should have been adjusted correctly!!!!
-      double calcIndividualProjectedEnergy(MPSstate * HamTimesTrial);
+      void sEL(MPSstate *HPsi0);
       
    private:
    
       //The MPS state
-      MPSstate * theState;
+      MPSstate *theState;
       
       //The walker overlap with the trial wfn
-      double overlap;
+      complex<double> overlap;
+
+      //!local energy
+      complex<double> EL;
+
+      //!local auxiliary operators: <PsiT|v|phi>/<PsiT|phi>
+      complex<double> *VL;
       
       //The walker weight
       double weight;
       
-      //The walker energy history: for all previous steps, contains the sum of the walker energies
-      double energyHistory;
-
 };
 
 #endif

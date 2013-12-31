@@ -82,7 +82,10 @@ class MPSstate{
       void ApplyMPO(MPO * theMPO, MPSstate * Psi0);
       
       //Apply the single-site Trotter term on each site
-      void ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter);
+      void ApplyH1(TrotterHeisenberg * theTrotter);
+
+      //apply the auxiliary field
+      void ApplyAF(int k,int r,double x,TrotterHeisenberg * theTrotter);
       
       //Check whether the work arrays are allocated with at least size size
       void checkWork1(const int size);

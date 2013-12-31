@@ -29,19 +29,19 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    Sz = new OpSz(phys_d);
 
    //The couplings, and the different couplings
-   Jv = new double [length * length];
+   J = new double [length * length];
 
    for(int i = 0;i < length;i++){
 
-      Jv[ i*length + i ] = 0.0;
+      J[ i*length + i ] = 0.0;
 
       for(int j = i + 1;j < length;j++){
 
          double theCoupling = theMPO->gCoupling(i,j);
 
          //couplingmatrix will contain the coupling J_[ij]
-         Jv[ j*length + i ] = theCoupling;
-         Jv[ i*length + j ] = theCoupling;
+         J[ j*length + i ] = theCoupling;
+         J[ i*length + j ] = theCoupling;
 
       }
 
@@ -57,9 +57,21 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    double * work = new double [lwork];
    int info;
 
-   dsyev_(&jobz,&uplo,&length,Jv,&length,Jeig,work,&lwork,&info);
+   dsyev_(&jobz,&uplo,&length,J,&length,Jeig,work,&lwork,&info);
 
    delete [] work;
+
+   V = new complex<double> [length*length];
+
+   //now transform the J elements with dtau and the eigenvalues for the propagator to form the transformation V
+   for(int k = 0;k < length;++k){
+
+      complex<double> tmp =  std::sqrt( (complex<double>)-2.0 * Jeig[k] * dtau);
+
+      for(int i = 0;i < length;++i)
+         V[k*length + i] = tmp * J[k*length + i];
+
+   }
 
    //The magnetic field and single-site propagator
    this->theField = theMPO->gField();
@@ -67,16 +79,18 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    this->isMagneticField = (fabs(theField) < 1.0e-15) ? false : true;
 
    //make the single site propagators
-   SzProp = new complex<double> [phys_d*phys_d];
+   H1Prop = new complex<double> [phys_d*phys_d];
 
    //e^Sz is diagonal in the physical site-basis
    for(int i = 0;i < phys_d;++i)
       for(int j = 0;j < phys_d;++j)
-         SzProp[j*phys_d + i] = exp((*Sz)(i,j));
+         H1Prop[j*phys_d + i] = exp(-0.5 * dtau * theField * (*Sz)(i,j));
+
+   Sx_vec = new complex<double> [phys_d*phys_d];
+   Sy_vec = new complex<double> [phys_d*phys_d];
 
    //for e^Sx and e^Sy we need the eigenvalues and eigenvectors of Sx and Sy to construct the propagator
-   complex<double> *mem = new complex<double> [phys_d*phys_d];
-   double *mem_eig = new double [phys_d];
+   eig = new double [phys_d];
 
    int clwork = 3*phys_d - 1;
 
@@ -88,47 +102,21 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
 
    for(int i = 0;i < phys_d;++i)
       for(int j = 0;j < phys_d;++j)
-         mem[j*phys_d + i] = (*Sx)(i,j);
+         Sx_vec[j*phys_d + i] = (*Sx)(i,j);
 
-   zheev_(&jobz,&uplo,&phys_d,mem,&phys_d,mem_eig,cwork,&clwork,rwork,&info);
-
-   //now construct the exponential:
-   SxProp = new complex<double> [phys_d*phys_d];
-
-   for(int i = 0;i < phys_d;++i)
-      for(int j = 0;j < phys_d;++j){
-
-         SxProp[j*phys_d + i] = complex<double>(0.0,0.0);
-
-         for(int k = 0;k < phys_d;++k)
-            SxProp[j*phys_d + i] += exp(mem_eig[k]) * mem[k*phys_d + i] * std::conj(mem[k*phys_d + j]);
-
-      }
+   zheev_(&jobz,&uplo,&phys_d,Sx_vec,&phys_d,eig,cwork,&clwork,rwork,&info);
 
    //Finally Sy
    for(int i = 0;i < phys_d;++i)
       for(int j = 0;j < phys_d;++j)
-         mem[j*phys_d + i] = (*Sy)(i,j);
+         Sy_vec[j*phys_d + i] = (*Sy)(i,j);
 
-   zheev_(&jobz,&uplo,&phys_d,mem,&phys_d,mem_eig,cwork,&clwork,rwork,&info);
+   zheev_(&jobz,&uplo,&phys_d,Sy_vec,&phys_d,eig,cwork,&clwork,rwork,&info);
 
-   //construct exponential
-   SyProp = new complex<double> [phys_d*phys_d];
-
-   for(int i = 0;i < phys_d;++i)
-      for(int j = 0;j < phys_d;++j){
-
-         SyProp[j*phys_d + i] = complex<double>(0.0,0.0);
-
-         for(int k = 0;k < phys_d;++k)
-            SyProp[j*phys_d + i] += exp(mem_eig[k]) * mem[k*phys_d + i] * std::conj(mem[k*phys_d + j]);
-
-      }
-
-   delete [] mem;
-   delete [] mem_eig;
    delete [] cwork;
    delete [] rwork;
+
+   AFProp = new complex<double> [length * phys_d * phys_d];
 
 }
 
@@ -138,12 +126,18 @@ TrotterHeisenberg::~TrotterHeisenberg(){
    delete Sy;
    delete Sz;
 
-   delete [] Jv;
+   delete [] J;
    delete [] Jeig;
 
-   delete [] SxProp;
-   delete [] SyProp;
-   delete [] SzProp;
+   delete [] V;
+
+   delete [] H1Prop;
+
+   delete [] eig;
+   delete [] Sx_vec;
+   delete [] Sy_vec;
+
+   delete [] AFProp;
 
 }
 
@@ -162,9 +156,18 @@ double TrotterHeisenberg::gField() const {
 /**
  * @return the j'th index of the k'th eigenvector of the couplingMatrix
  */
-double TrotterHeisenberg::gJv(const int k, const int i) const {
+double TrotterHeisenberg::gJ(const int k, const int i) const {
 
-   return Jv[ k*length + i ]; 
+   return J[ k*length + i ]; 
+
+}
+
+/**
+ * @return the j'th index of the k'th eigenvector of the transformation matrix
+ */
+complex<double> TrotterHeisenberg::gV(const int k, const int i) const {
+
+   return V[ k*length + i ]; 
 
 }
 
@@ -177,12 +180,82 @@ double TrotterHeisenberg::gJeig( const int i) const {
 
 }
 
+/**
+ * @return the timestep
+ */
+double TrotterHeisenberg::gtau() const {
+
+   return dtau;
+
+}
 
 /**
- * @return element (i,j) of the single site propagotor e^{tau h S_z)
+ * @return the propagator matrix for the H1
  */
-complex<double> TrotterHeisenberg::gSzProp(const int i, const int j) const{
+complex<double> TrotterHeisenberg::gH1Prop(int i,int j) const {
 
-   return SzProp[j*phys_d + i];
+   return H1Prop[j*phys_d + i];
+
+}
+
+/**
+ * @return the propagator matrix for the H1
+ */
+complex<double> TrotterHeisenberg::gAFProp(int site,int i,int j) const {
+
+   return AFProp[site*phys_d*phys_d + j*phys_d + i];
+
+}
+
+/**
+ * fill the AFProp array with the correct propagator
+ * @param k index of eigenvectors of J
+ * @param r type of operator, x,y or z
+ * @param x auxiliary field variable
+ */
+void TrotterHeisenberg::fillAFProp(int k,int r,double x){
+
+   if(r == 0){//x
+
+      for(int site = 0;site < length;++site){
+
+         for(int i = 0;i < phys_d;++i)
+            for(int j = 0;j < phys_d;++j){
+
+               AFProp[site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
+
+               for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
+                  AFProp[site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
+
+            }
+
+      }
+
+   }
+   else if(r == 1){//y
+
+      for(int site = 0;site < length;++site){
+
+         for(int i = 0;i < phys_d;++i)
+            for(int j = 0;j < phys_d;++j){
+
+               AFProp[site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
+
+               for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
+                  AFProp[site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
+
+            }
+
+      }
+
+   }
+   else{//z
+
+      for(int site = 0;site < length;++site)
+         for(int i = 0;i < phys_d;++i)
+            for(int j = 0;j < phys_d;++j)
+               AFProp[site*phys_d*phys_d + j*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,j) );
+
+   }
 
 }

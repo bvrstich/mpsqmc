@@ -23,16 +23,22 @@ class TrotterHeisenberg{
       
       //Return the magnetic field
       double gField() const;
+
+      double gtau() const;
       
       //Get a particular coupling element J_ij
-      double gJv(const int i, const int j) const;
+      double gJ(const int i, const int j) const;
+
+      complex<double> gV(const int i, const int j) const;
 
       double gJeig(const int i) const;
       
       //Get the single-site propagator element Op(i,j)
-      complex<double> gSxProp(const int i, const int j) const;
-      complex<double> gSyProp(const int i, const int j) const;
-      complex<double> gSzProp(const int i, const int j) const;
+      complex<double> gH1Prop(const int i, const int j) const;
+
+      complex<double> gAFProp(int site,const int i, const int j) const;
+
+      void fillAFProp(int k,int r,double x);
       
    private:
    
@@ -52,7 +58,10 @@ class TrotterHeisenberg{
       bool isMagneticField;
       
       //The coupling matrix
-      double *Jv;
+      double *J;
+      
+      //!the transformation matrix
+      complex<double> *V;
       
       //The time step
       double dtau;
@@ -62,10 +71,16 @@ class TrotterHeisenberg{
       OpSy *Sy;
       OpSz *Sz;
 
+      complex<double> *Sx_vec;
+      complex<double> *Sy_vec;
+
+      double *eig;
+
       //!the single site propagators
-      complex<double> *SxProp;
-      complex<double> *SyProp;
-      complex<double> *SzProp;
+      complex<double> *H1Prop;
+
+      //!the auxiliary-field propagators
+      complex<double> *AFProp;
       
       double *Jeig;
       

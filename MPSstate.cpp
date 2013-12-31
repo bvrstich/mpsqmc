@@ -481,7 +481,7 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
 }
 
 void MPSstate::ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter){
-
+/*
    if (theTrotter->gIsMagneticField()){
 
       for (int site=0; site<length; site++){
@@ -512,7 +512,7 @@ void MPSstate::ApplyOneSiteTrotterTermEverywhere(TrotterHeisenberg * theTrotter)
 
       }
    }
-
+*/
 }
 
 ostream &operator<<(ostream &output,MPSstate &mps){

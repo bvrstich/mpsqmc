@@ -25,6 +25,7 @@ extern "C" {
    void dsymv_(char *uplo, int *n, double *alpha, double *A, int *lda, double *X, int *incx, double *beta, double *Y, int *incy);
    double ddot_(int *n,double *x,int *incx,double *y,int *incy);
    void dsyev_(char *jobz,char *uplo,int *n,double *A,int *lda,double *W,double *work,int *lwork,int *info);
+   void zheev_(char *jobz,char *uplo,int *n,complex<double> *A,int *lda,double *W,complex<double> *work,int *lwork,double *rwork,int *info);
    void dgesdd_(char* JOBZ, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* IWORK, int* INFO);
    void zgesdd_(char* JOBZ, int *M, int *N, complex<double> *A,int *LDA,double *S,complex<double> *U,int *LDU,complex<double> *VT,int *LDVT,complex<double> *WORK,int *LWORK,double *RWORK,int *IWORK,int *INFO);
    void dgeev_(char*jobvl,char*jobvr,int*n,double*A,int*lda,double* wr,double* wi,double * vl,int *ldvl,double *vr,int*ldvr,double*work,int*lwork,int*info);

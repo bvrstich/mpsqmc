@@ -40,6 +40,9 @@ int main(int argc,char *argv[]){
 
    TrotterHeisenberg(&theMPO,0.01);
 
+   OpSy sy(d);
+   cout << sy << endl;
+
 /*
 
    char filename[100];

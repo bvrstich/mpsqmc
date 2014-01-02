@@ -13,9 +13,6 @@ class AFQMC{
 
    public:
    
-      //Constructor
-      AFQMC(HeisenbergMPO * theMPO,Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau);
-
       //constructor with input trialwavefunction
       AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
       

@@ -16,58 +16,14 @@ using namespace std;
 /**
  * constructor of the AFQMC object, takes input parameters that define the QMC walk.
  * @param theMPO MPO containing relevant matrix elements, defines system being studied
- * @param DT dimension of the trialstate
- * @param DW dimension of the walkers
- * @param Nwalkers number of Walker states
- * @param dtau time step of each evolution
- */
-AFQMC::AFQMC(HeisenbergMPO * theMPO,Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau){
-
-   this->theMPO = theMPO;
-   this->RN = RN;
-   this->DT = DT;
-   this->DW = DW;
-   this->dtau = dtau;
-
-   this->theTrotter = new TrotterHeisenberg(theMPO,dtau);
-
-   this->totalNDesiredWalkers = Nwalkers;
-   this->totalNCurrentWalkers = Nwalkers;
-/*
-   SetupOMPandMPILoadDistribution();
-
-   myMaxNWalkers = max(1000,3*NDesiredWalkersPerRank[MPIrank]);
-
-#ifdef USE_MPI_IN_MPSQMC
-   MPI::COMM_WORLD.Barrier();
-#endif
-
-   Psi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
-
-   SetupTrial(true);
-
-#ifdef USE_MPI_IN_MPSQMC
-   MPI::COMM_WORLD.Barrier();
-#endif
-
-   SetupWalkers();
-*/
-}
-
-/**
- * constructor of the AFQMC object, takes input parameters that define the QMC walk.
- * @param theMPO MPO containing relevant matrix elements, defines system being studied
- * @param theGrid Generates a grid for the random picking of terms from the two-site trotter MPO's
  * @param Psi0 input trialwavefunction
  * @param Dtrunc dimension of the walkers
  * @param Nwalkers number of Walker states
  * @param dtau time step of each evolution
  */
- /*
-AFQMC::AFQMC(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
+AFQMC::AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
 
    this->theMPO = theMPO;
-   this->theGrid = theGrid;
    this->RN = RN;
    this->DT = Psi0_in->gDtrunc();
    this->DW = DW;
@@ -92,13 +48,13 @@ AFQMC::AFQMC(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, MPSst
    Psi0[0] = new MPSstate(Psi0_in);
 
    SetupTrial(false);
-
+/*
 #ifdef USE_MPI_IN_MPSQMC
    MPI::COMM_WORLD.Barrier();
 #endif
 
    SetupWalkers();
-
+*/
 }
 
 void AFQMC::SetupOMPandMPILoadDistribution(){
@@ -148,7 +104,7 @@ void AFQMC::SetupOMPandMPILoadDistribution(){
    for (int count=0; count<MPIsize; count++)
       NCurrentWalkersPerRank[count] = NDesiredWalkersPerRank[count];
 
-   if (MPIrank==0){
+   if(MPIrank==0){
 
       cout << "There are " << MPIsize << " MPI processes." << endl;
 
@@ -176,22 +132,12 @@ AFQMC::~AFQMC(){
    delete theTrotter;
 
    //AFQMC::SetupTrial
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){
-      for (int cnt2=0; cnt2<nCouplings; cnt2++){
-         for (int cnt3=0; cnt3<trotterSVDsize*trotterSVDsize; cnt3++){ delete TrotterTermsTimesPsi0[cnt][cnt2][cnt3]; }
-         delete [] TrotterTermsTimesPsi0[cnt][cnt2];
-      }
-
+   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++)
       delete Psi0[cnt];
-      delete HPsi0[cnt];
-      delete [] TrotterTermsTimesPsi0[cnt];
-   }
 
    delete [] Psi0;
+   /*
    delete [] HPsi0;
-   delete [] TrotterTermsTimesPsi0;
-   delete [] firstIndexCoupling;
-   delete [] secondIndexCoupling;
 
    //AFQMC::SetupWalkers
    for (int cnt=0; cnt<NCurrentWalkersPerRank[MPIrank]; cnt++){ delete theWalkers[cnt]; }
@@ -204,41 +150,21 @@ AFQMC::~AFQMC(){
    delete [] thePDF;
    delete [] theOperatorCombos;
    delete [] sumWalkerWeightPerThread;
-
+*/
    //AFQMC::SetupOMPandMPILoadDistribution
    delete [] NThreadsPerRank;
    delete [] NDesiredWalkersPerRank;
    delete [] NCurrentWalkersPerRank;
 
 }
-*/
+
 /**
  * construct the trial wavefunction
  */
- /*
 void AFQMC::SetupTrial(){
 
-   if(MPIrank==0){
-
-      if(dmrg_flag){
-
-         //create initial MPS guess
-         Psi0[0] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-
-         //find optimal MPS for specific MPO using DMRG algorithm
-         DMRG * solver = new DMRG(Psi0[0],theMPO);
-
-         solver->Solve();
-
-         delete solver;
-
+   if(MPIrank==0)
          Psi0[0]->LeftNormalize();
-
-      }
-      else
-         Psi0[0]->LeftNormalize();
-
-   }
 
 #ifdef USE_MPI_IN_MPSQMC
    Psi0[0] = BroadcastCopyConstruct(Psi0[0]);

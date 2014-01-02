@@ -10,8 +10,7 @@
 #include "AFMPO.h"
 #include "TrotterHeisenberg.h"
 #include "Walker.h"
-//#include "MPSQMC2.h"
-//#include "GridGenerator.h"
+#include "AFQMC.h"
 
 using namespace std;
 
@@ -29,8 +28,9 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-   int L = 10;
-   int D = 8;
+   int L = 20;
+   int DT = 4;
+   int DW = 2;
    int d = 2;
 
    HeisenbergMPO theMPO(L,d);
@@ -39,28 +39,16 @@ int main(int argc,char *argv[]){
       theMPO.sCoupling(cnt,cnt+1,1.0);
 
    theMPO.sField(0.0);
-   TrotterHeisenberg(&theMPO,0.01);
 
-/*
-
-   char filename[100];
-   sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,D);
-
-   MPSstate Psi0(filename,&RN);
-
-   GridGenerator theGrid(4);
-   theGrid.FillMarsaglia(4);
-
-   int DT = 4;
-   int DW = 2;
+   Random RN;
+   MPSstate Psi0("debug.mps",&RN);
 
    int Nwalkers = 1000;
    double dtau = 0.01;
    int nSteps = 10000;
 
-   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN,&Psi0,DW, Nwalkers, dtau);
-   thePopulation.Walk(nSteps);
-*/
+   AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
+
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
 #endif

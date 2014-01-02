@@ -121,6 +121,13 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
 
    AFProp = new complex<double> [length * phys_d * phys_d];
 
+   //finally construct the auxiliary field operators as MPO's:
+   V_Op = new AFMPO * [3*length];
+
+   for(int r = 0;r < 3;++r)
+      for(int i = 0;i < length;++i)
+         V_Op[r*length + i] = new AFMPO(length,phys_d,r,V + i*length);
+
 }
 
 TrotterHeisenberg::~TrotterHeisenberg(){
@@ -141,6 +148,12 @@ TrotterHeisenberg::~TrotterHeisenberg(){
    delete [] Sy_vec;
 
    delete [] AFProp;
+
+   for(int r = 0;r < 3;++r)
+      for(int i = 0;i < length;++i)
+         delete V_Op[r*length + i];
+
+   delete [] V_Op;
 
 }
 
@@ -260,5 +273,14 @@ void TrotterHeisenberg::fillAFProp(int k,int r,double x){
                AFProp[site*phys_d*phys_d + j*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,j) );
 
    }
+
+}
+
+/**
+ * @return the auxiliary field operator V associated with the k'th eigenvector of J, and operator Sr
+ */
+AFMPO *TrotterHeisenberg::gV_Op(int k,int r){
+
+   return V_Op[r*length + k];
 
 }

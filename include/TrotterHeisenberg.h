@@ -5,6 +5,7 @@
 #include "OpSz.h"
 #include "OpSx.h"
 #include "OpSy.h"
+#include "AFMPO.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 14, 2013 */
 
@@ -39,6 +40,8 @@ class TrotterHeisenberg{
       complex<double> gAFProp(int site,const int i, const int j) const;
 
       void fillAFProp(int k,int r,double x);
+
+      AFMPO *gV_Op(int k,int r);
       
    private:
    
@@ -62,6 +65,8 @@ class TrotterHeisenberg{
       
       //!the transformation matrix
       complex<double> *V;
+
+      AFMPO **V_Op;
       
       //The time step
       double dtau;

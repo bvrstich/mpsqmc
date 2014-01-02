@@ -393,7 +393,13 @@ void MPSstate::CompressState(const int truncD){
       VirtualD[cnt+1] = the2siteObject->Decompose(theTensors[cnt], theTensors[cnt+1], truncD, false, true);
    }
 
-   Dtrunc = truncD;
+   int maxD = VirtualD[0];
+
+   for(int i = 1;i < length;++i)
+      if(maxD < VirtualD[i])
+         maxD = VirtualD[i];
+
+   Dtrunc = maxD;
 
 }
 

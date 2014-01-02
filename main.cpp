@@ -26,9 +26,9 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-   int L = atoi(argv[1]);
-   int DT = atoi(argv[2]);
-   int DW = atoi(argv[3]);
+   int L = 50;//atoi(argv[1]);
+   int DT = 8;//atoi(argv[2]);
+   int DW = 8;//atoi(argv[3]);
    int d = 2;
 
    bool useLadder = false;
@@ -36,31 +36,25 @@ int main(int argc,char *argv[]){
    HeisenbergMPO theMPO(L,d,useLadder);
 
    for (int cnt=0; cnt<L-1; cnt++)
-      theMPO.sCoupling(cnt,cnt+1,0.0);
+      theMPO.sCoupling(cnt,cnt+1,1.0);
 
-   theMPO.sField(1.0);
+   theMPO.sField(0.0);
+
+   char filename[100];
+   sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,DT);
 
    Random RN;
-   
-   MPSstate Psi0(L, DT, d, &RN);
-   /*
-   DMRG theSolver(&Psi0, &theMPO);
-   double Energy = theSolver.Solve();
-   cout << "The energy from DMRG = " << Energy << endl; //J1=1 J2=0 square 4x4, h=0, d=2 E("FCI") = -11.2284832084289
-*/
-   ofstream out("test.mps");
-   out.precision(15);
-   out << Psi0;
+   MPSstate Psi0(filename,&RN);
 
-   cout << endl;
-   cout << endl;
+   GridGenerator theGrid(4);
+   theGrid.FillMarsaglia(4);
 
-   MPSstate HPsi0(L, DT, d, &RN);
-   HPsi0.ApplyMPO(&theMPO,&Psi0);
+   int Nwalkers = 1000;
+   double dtau = 0.01;
+   int nSteps = 1;
 
-   cout << HPsi0 << endl;
-   cout << HPsi0.InnerProduct(&HPsi0) << endl;
-
+   MPSQMC2 thePopulation(&theMPO, &theGrid, &RN,&Psi0,DW, Nwalkers, dtau);
+   thePopulation.Walk(nSteps);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

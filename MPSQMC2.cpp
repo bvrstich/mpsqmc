@@ -406,14 +406,6 @@ void MPSQMC2::SetupWalkers(){
          theWalkers[0]->gState()->CompressState(DW);//compress the state to Walker D
          theWalkers[0]->setOverlap(Psi0[0]);
 
-         //test
-         MPSstate tmp(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-         tmp.ApplyMPO(theMPO, theWalkers[0]->gState());
-
-         cout << theWalkers[0]->gOverlap() << endl;
-         cout << tmp.InnerProduct(theWalkers[0]->gState()) << endl;
-         cout << theWalkers[0]->gState()->InnerProduct(theWalkers[0]->gState()) << endl;
-
       }
 
    }

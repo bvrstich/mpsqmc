@@ -7,6 +7,7 @@
 #include "HeisenbergMPO.h"
 #include "TwoSiteObject.h"
 #include "MPSstate.h"
+#include "AFMPO.h"
 #include "TrotterHeisenberg.h"
 #include "Walker.h"
 //#include "MPSQMC2.h"
@@ -38,7 +39,6 @@ int main(int argc,char *argv[]){
       theMPO.sCoupling(cnt,cnt+1,1.0);
 
    theMPO.sField(0.0);
-
    TrotterHeisenberg(&theMPO,0.01);
 
 /*

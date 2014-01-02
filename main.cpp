@@ -26,9 +26,9 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-   int L = 50;//atoi(argv[1]);
-   int DT = 8;//atoi(argv[2]);
-   int DW = 8;//atoi(argv[3]);
+   int L = 20;//atoi(argv[1]);
+   int DT = 4;//atoi(argv[2]);
+   int DW = 2;//atoi(argv[3]);
    int d = 2;
 
    bool useLadder = false;
@@ -40,18 +40,18 @@ int main(int argc,char *argv[]){
 
    theMPO.sField(0.0);
 
-   char filename[100];
-   sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,DT);
+   //char filename[100];
+   //sprintf(filename,"input/Heisenberg1D/L%dD%d.mps",L,DT);
 
    Random RN;
-   MPSstate Psi0(filename,&RN);
+   MPSstate Psi0("debug.mps",&RN);
 
    GridGenerator theGrid(4);
    theGrid.FillMarsaglia(4);
 
    int Nwalkers = 1000;
    double dtau = 0.01;
-   int nSteps = 1;
+   int nSteps = 10000;
 
    MPSQMC2 thePopulation(&theMPO, &theGrid, &RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);

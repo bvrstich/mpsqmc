@@ -22,12 +22,12 @@ class TrotterHeisenberg{
       bool gIsMagneticField() const;
       
       //Return the magnetic field
-      double gField() const;
+      complex<double> gField() const;
 
       double gtau() const;
       
       //Get a particular coupling element J_ij
-      double gJ(const int i, const int j) const;
+      complex<double> gJ(const int i, const int j) const;
 
       complex<double> gV(const int i, const int j) const;
 
@@ -52,13 +52,13 @@ class TrotterHeisenberg{
       int phys_d;
       
       //The magnetic field
-      double theField;
+      complex<double> theField;
       
       //Whether there is a magnetic field or not
       bool isMagneticField;
       
       //The coupling matrix
-      double *J;
+      complex<double> *J;
       
       //!the transformation matrix
       complex<double> *V;

@@ -18,32 +18,31 @@ HeisenbergMPO::HeisenbergMPO(const int length, const int phys_d) : MPO(){
    this->opSx  = new OpSx(phys_d);
    this->opSy = new OpSy(phys_d);
    this->opSz     = new OpSz(phys_d);
-
-   fOne = complex<double>(1.0,0.0);
-   fZero = complex<double>(0.0,0.0);
    
-   MinusH = complex<double>(0.0,0.0);
-
-   couplingMatrix = new complex<double> [(length * (length - 1))/2];
+   MinusH = -0.0;
+   couplingMatrix      = new double[(length * (length - 1))/2];
 
    for (int count=0; count<(length * (length - 1))/2; count++)
-      couplingMatrix[count] = complex<double>(0.0,0.0); 
+      couplingMatrix[count] = 0.0; 
+   
+   fZero = 0.0;
+   fOne = 1.0;
    
    MPOdimensions = new int [length+1];
    fillMPOdimensions();
    
-   MPOprefactors = new complex<double> *** [length];
+   MPOprefactors = new double *** [length];
    MPOoperators  = new Operator *** [length];
 
    for(int site = 0;site < length;site++){
 
-      MPOprefactors[site] = new complex<double> ** [dimL(site)];
+      MPOprefactors[site] = new double**[dimL(site)];
       MPOoperators[site]  = new Operator**[dimL(site)];
 
       for(int row=0; row<dimL(site); row++){
 
-         MPOprefactors[site][row] = new complex<double> * [dimR(site)];
-         MPOoperators[site][row]  = new Operator * [dimR(site)];
+         MPOprefactors[site][row] = new double*[dimR(site)];
+         MPOoperators[site][row]  = new Operator*[dimR(site)];
 
       }
 
@@ -63,20 +62,14 @@ HeisenbergMPO::~HeisenbergMPO(){
    
    delete [] couplingMatrix;
    
-   for (int site = 0;site < length;site++){
-
+   for (int site=0; site<length; site++){
       for (int row=0; row<dimL(site); row++){
-
          delete [] MPOprefactors[site][row];
          delete [] MPOoperators[site][row];
-
       }
-
       delete [] MPOprefactors[site];
       delete [] MPOoperators[site];
-
    }
-
    delete [] MPOprefactors;
    delete [] MPOoperators;
    
@@ -105,77 +98,58 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
    //First and last site are pretty easy (length of min. 3 is assumed)
    MPOprefactors[0][0][0] = &MinusH;
    MPOoperators[0][0][0] = opSz;
-
    MPOprefactors[0][0][1] = &fOne;
    MPOoperators[0][0][1] = opSx;
-
    MPOprefactors[0][0][2] = &fOne;
    MPOoperators[0][0][2] = opSy;
-
    MPOprefactors[0][0][3] = &fOne;
    MPOoperators[0][0][3] = opSz;
-
    MPOprefactors[0][0][4] = &fOne;
    MPOoperators[0][0][4] = opOne;
    
    MPOprefactors[length-1][0][0] = &fOne;
    MPOoperators[length-1][0][0] = opOne;
-
    MPOprefactors[length-1][1][0] = &fOne;
    MPOoperators[length-1][1][0] = opSx;
-
    MPOprefactors[length-1][2][0] = &fOne;
    MPOoperators[length-1][2][0] = opSy;
-
    MPOprefactors[length-1][3][0] = &fOne;
    MPOoperators[length-1][3][0] = opSz;
-
    MPOprefactors[length-1][4][0] = &MinusH;
    MPOoperators[length-1][4][0] = opSz;
    
    //What is to be done before the switch site, is also well known
    for (int site=1; site<locSwitch; site++){
    
-      for (int row=0; row<dimL(site); row++)
+      for (int row=0; row<dimL(site); row++){
          for (int col=0; col<dimR(site); col++){
-
             MPOprefactors[site][row][col] = &fZero;
             MPOoperators[site][row][col] = opZero;
-         
+         }
       }
-
       for (int row=0; row<dimL(site)-1; row++){
-
          MPOprefactors[site][row][row] = &fOne;
          MPOoperators[site][row][row] = opOne;
-
       }
-
       MPOprefactors[site][dimL(site)-1][0] = &MinusH;
       MPOoperators[site][dimL(site)-1][0] = opSz;
-
       MPOprefactors[site][dimL(site)-1][dimL(site)-1] = &fOne;
       MPOoperators[site][dimL(site)-1][dimL(site)-1] = opSx;
-
       MPOprefactors[site][dimL(site)-1][dimL(site)] = &fOne;
       MPOoperators[site][dimL(site)-1][dimL(site)] = opSy;
-
       MPOprefactors[site][dimL(site)-1][dimL(site)+1] = &fOne;
       MPOoperators[site][dimL(site)-1][dimL(site)+1] = opSz;
-
       MPOprefactors[site][dimL(site)-1][dimL(site)+2] = &fOne;
       MPOoperators[site][dimL(site)-1][dimL(site)+2] = opOne;
 
-      for(int row=0; row<site; row++){
+      for (int row=0; row<site; row++){
 
-         complex<double> * value = gCouplingPointer(row,site);
+         double * value = gCouplingPointer(row,site);
 
          MPOprefactors[site][1 + 3*row + 0][0] = value;
          MPOoperators[site][ 1 + 3*row + 0][0] = opSx;
-
          MPOprefactors[site][1 + 3*row + 1][0] = value;
          MPOoperators[site][ 1 + 3*row + 1][0] = opSy;
-
          MPOprefactors[site][1 + 3*row + 2][0] = value;
          MPOoperators[site][ 1 + 3*row + 2][0] = opSz;
 
@@ -196,20 +170,17 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
 
       MPOprefactors[locSwitch][0][0] = &fOne;
       MPOoperators[locSwitch][0][0] = opOne;
-
       MPOprefactors[locSwitch][dimL(locSwitch)-1][0] = &MinusH;
       MPOoperators[ locSwitch][dimL(locSwitch)-1][0] = opSz;
 
       for (int row=0; row<locSwitch; row++){
 
-         complex<double> * value = gCouplingPointer(row,locSwitch);
+         double * value = gCouplingPointer(row,locSwitch);
 
          MPOprefactors[locSwitch][1 + 3*row + 0][0] = value;
          MPOoperators[ locSwitch][1 + 3*row + 0][0] = opSx;
-
          MPOprefactors[locSwitch][1 + 3*row + 1][0] = value;
          MPOoperators[ locSwitch][1 + 3*row + 1][0] = opSy;
-
          MPOprefactors[locSwitch][1 + 3*row + 2][0] = value;
          MPOoperators[ locSwitch][1 + 3*row + 2][0] = opSz;
 
@@ -230,14 +201,12 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
 
       for (int col=0; col<length-1-locSwitch; col++){
 
-         complex<double> * value = gCouplingPointer(locSwitch,locSwitch+1+col);
+         double * value = gCouplingPointer(locSwitch,locSwitch+1+col);
 
          MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 0] = value;
          MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 0] = opSx;
-
          MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 1] = value;
          MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 1] = opSy;
-
          MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*col + 2] = value;
          MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*col + 2] = opSz;
 
@@ -261,16 +230,12 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
       
       MPOprefactors[site][0][0] = &fOne;
       MPOoperators[site][0][0] = opOne;
-
       MPOprefactors[site][dimL(site)-1][0] = &MinusH;
       MPOoperators[site][dimL(site)-1][0] = opSz;
-
       MPOprefactors[site][1][0] = &fOne;
       MPOoperators[ site][1][0] = opSx;
-
       MPOprefactors[site][2][0] = &fOne;
       MPOoperators[ site][2][0] = opSy;
-
       MPOprefactors[site][3][0] = &fOne;
       MPOoperators[ site][3][0] = opSz;
 
@@ -283,14 +248,12 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
 
       for (int col=0; col<length-1-site; col++){
 
-         complex<double> * value = gCouplingPointer(site,site+1+col);
+         double * value = gCouplingPointer(site,site+1+col);
 
          MPOprefactors[site][dimL(site)-1][1 + 3*col + 0] = value;
          MPOoperators[ site][dimL(site)-1][1 + 3*col + 0] = opSx;
-
          MPOprefactors[site][dimL(site)-1][1 + 3*col + 1] = value;
          MPOoperators[ site][dimL(site)-1][1 + 3*col + 1] = opSy;
-
          MPOprefactors[site][dimL(site)-1][1 + 3*col + 2] = value;
          MPOoperators[ site][dimL(site)-1][1 + 3*col + 2] = opSz;
 
@@ -300,19 +263,19 @@ void HeisenbergMPO::fillMPOprefactorsMPOoperators(){
 
 }
 
-void HeisenbergMPO::sField(const complex<double> value){
+void HeisenbergMPO::sField(const double value){
    
    MinusH = -value; 
    
 }
 
-complex<double> HeisenbergMPO::gField() const{
+double HeisenbergMPO::gField() const{
    
    return -MinusH; 
    
 }
 
-void HeisenbergMPO::sCoupling(const int i, const int j, const complex<double> value){
+void HeisenbergMPO::sCoupling(const int i, const int j, const double value){
 
    if ((i==j) || (i<0) || (i>=length) || (j<0) || (j>=length)) {
       cerr << "HeisenbergMPO::sCoupling  :  The combination of indices (" << i << "," << j << ") is not OK." << endl;
@@ -326,55 +289,41 @@ void HeisenbergMPO::sCoupling(const int i, const int j, const complex<double> va
 
 }
 
-complex<double> HeisenbergMPO::gCoupling(const int i, const int j) const{
+double HeisenbergMPO::gCoupling(const int i, const int j) const{
 
    if ((i==j) || (i<0) || (i>=length) || (j<0) || (j>=length)) {
-
       cerr << "HeisenbergMPO::gCoupling  :  The combination of indices (" << i << "," << j << ") is not OK." << endl;
       return NAN;
-
    }
    
-   if (i<j)
-      return couplingMatrix[ (j*(j-1))/2 + i ];
-
+   if (i<j){ return couplingMatrix[ (j*(j-1))/2 + i ]; }
    return couplingMatrix[ (i*(i-1))/2 + j ];
 
 }
 
-complex<double> *HeisenbergMPO::gCouplingPointer(const int i, const int j){
+double * HeisenbergMPO::gCouplingPointer(const int i, const int j){
 
    if ((i==j) || (i<0) || (i>=length) || (j<0) || (j>=length)) {
-
       cerr << "HeisenbergMPO::gCouplingPointer  :  The combination of indices (" << i << "," << j << ") is not OK." << endl;
       return NULL;
-
    }
    
-   if(i < j)
-      return couplingMatrix + (j*(j-1))/2 + i;
-
+   if (i<j){ return couplingMatrix + (j*(j-1))/2 + i; }
    return couplingMatrix + (i*(i-1))/2 + j;
 
 }
 
-complex<double> HeisenbergMPO::gPrefactor(const int site, const int row, const int col) const{
+double HeisenbergMPO::gPrefactor(const int site, const int row, const int col) const{
 
-   if ((site<0) || (site>=length) || (row<0) || (row>=dimL(site)) || (col<0) || (col>=dimR(site)))
-      return 0.0; 
-
-   return *MPOprefactors[site][row][col];
+   if ((site<0) || (site>=length) || (row<0) || (row>=dimL(site)) || (col<0) || (col>=dimR(site))){ return 0.0; }
+   return MPOprefactors[site][row][col][0];
 
 }
 
 Operator * HeisenbergMPO::gOperator(const int site, const int row, const int col) const{
 
-   if ((site<0) || (site>=length) || (row<0) || (row>=dimL(site)) || (col<0) || (col>=dimR(site)))
-      return NULL;
-
-   if(abs(gPrefactor(site,row,col)) < 1.0e-15) 
-      return opZero;
-
+   if ((site<0) || (site>=length) || (row<0) || (row>=dimL(site)) || (col<0) || (col>=dimR(site))){ return NULL; }
+   if (gPrefactor(site,row,col)==0.0){ return opZero; }
    return MPOoperators[site][row][col];
 
 }
@@ -409,48 +358,31 @@ ostream& operator<<(ostream& os, const HeisenbergMPO& theMPO){
    os << "HeisenbergMPO  with  L = " << theMPO.gLength() << "  and  d = " << theMPO.gPhys_d() << endl;
    os << "Field = " << theMPO.gField() << endl;
    os << "Non-zero coupling between sites (i,j) = value :" << endl;
-   for (int i=0; i<theMPO.gLength()-1; i++)
+   for (int i=0; i<theMPO.gLength()-1; i++){
       for (int j=i+1; j<theMPO.gLength(); j++){
-
-         complex<double> value = theMPO.gCoupling(i,j);
-         if (abs(value) > 1.0e-15)
-            os << "\t\t(" << i << "," << j << ") = " << value << endl;
-
+         double value = theMPO.gCoupling(i,j);
+         if (value != 0.0){ os << "\t\t(" << i << "," << j << ") = " << value << endl; }
       }
-   
+   }
    os << "MPO dimensions = \n\t\t1\t";
-   for (int site=0; site<theMPO.gLength(); site++)
-      os << theMPO.dimR(site) << "\t";
+   for (int site=0; site<theMPO.gLength(); site++){ os << theMPO.dimR(site) << "\t"; }
    os << endl;
    
    os << "---------------------------------------------------------------------------------------" << endl;
    
    for (int site=0; site<theMPO.gLength(); site++){
-
       os << "MPO at site " << site << " is :" << endl;
-
       for (int row=0; row<theMPO.dimL(site); row++){
-
          os << "\t";
-
          for (int col=0; col<theMPO.dimR(site); col++){
-
-            complex<double> value = theMPO.gPrefactor(site,row,col);
-
-            if(abs(value) > 1.0e-15)
-               os << "( " << value << ";";
-            else
-               os << "(" << value << ";";
-
+            double value = theMPO.gPrefactor(site,row,col);
+            if (value>=0.0){ os << "( " << value << ";"; }
+            else { os << "(" << value << ";"; }
             theMPO.printOperatorTag(os, theMPO.gOperator(site,row,col));
             os << ")\t";
-
          }
-
          os << endl;
-
       }
-
       os << "---------------------------------------------------------------------------------------" << endl;
    }
    

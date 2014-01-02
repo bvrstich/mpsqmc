@@ -7,7 +7,8 @@
 #include "HeisenbergMPO.h"
 #include "TwoSiteObject.h"
 #include "MPSstate.h"
-//#include "TrotterHeisenberg.h"
+#include "TrotterHeisenberg.h"
+#include "Walker.h"
 //#include "MPSQMC2.h"
 //#include "GridGenerator.h"
 

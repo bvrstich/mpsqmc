@@ -27,13 +27,13 @@ class MPO{
       int dimR(const int site) const;
       
       //Get a certain prefactor
-      virtual double gPrefactor(const int site, const int row, const int col) const = 0;
+      virtual complex<double> gPrefactor(const int site, const int row, const int col) const = 0;
       
       //Get the pointer to a certain Operator
       virtual Operator * gOperator(const int site, const int row, const int col) const = 0;
       
    protected:
-   
+
       //The chain length
       int length;
       
@@ -47,7 +47,7 @@ class MPO{
       Operator **** MPOoperators;
       
       //The MPO operator prefactor pointers : MPOprefactors[site][row][col] gives the pointer to the prefactor of the Operator at MPOoperators[site][row][col]
-      double **** MPOprefactors;
+      complex<double> **** MPOprefactors;
       
 };
 

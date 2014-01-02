@@ -432,7 +432,7 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
 
             if (!(theOp->AmIOp0())){
 
-               const double factor = theMPO->gPrefactor(site,MPOleft,MPOright);
+               const complex<double> factor = theMPO->gPrefactor(site,MPOleft,MPOright);
 
                for(int phys_up = 0;phys_up < phys_d;phys_up++){//physical index of the resultant MPStensor: i.e. upper index of the MPO
 

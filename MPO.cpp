@@ -2,9 +2,17 @@
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 29, 2013 */
 
-int MPO::gLength() const{ return length; }
+int MPO::gLength() const{
+   
+   return length; 
+   
+}
 
-int MPO::gPhys_d() const{ return phys_d; }
+int MPO::gPhys_d() const {
+   
+   return phys_d; 
+   
+}
 
 int MPO::dimL(const int site) const{
 

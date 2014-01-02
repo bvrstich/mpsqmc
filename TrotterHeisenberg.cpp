@@ -29,7 +29,7 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    Sz = new OpSz(phys_d);
 
    //The couplings, and the different couplings
-   J = new double [length * length];
+   J = new complex<double> [length * length];
 
    for(int i = 0;i < length;i++){
 
@@ -37,11 +37,11 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
 
       for(int j = i + 1;j < length;j++){
 
-         double theCoupling = theMPO->gCoupling(i,j);
+         complex<double> theCoupling = theMPO->gCoupling(i,j);
 
          //couplingmatrix will contain the coupling J_[ij]
          J[ j*length + i ] = theCoupling;
-         J[ i*length + j ] = theCoupling;
+         J[ i*length + j ] = conj(theCoupling);
 
       }
 
@@ -54,12 +54,17 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    Jeig = new double [length];
 
    int lwork = 3*length - 1;
-   double * work = new double [lwork];
+   complex<double> * work = new complex<double> [lwork];
+
+   int rlwork = 3*length - 2;
+   double *rwork = new double [rlwork];
+  
    int info;
 
-   dsyev_(&jobz,&uplo,&length,J,&length,Jeig,work,&lwork,&info);
+   zheev_(&jobz,&uplo,&length,J,&length,Jeig,work,&lwork,rwork,&info);
 
    delete [] work;
+   delete [] rwork;
 
    V = new complex<double> [length*length];
 
@@ -76,7 +81,7 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    //The magnetic field and single-site propagator
    this->theField = theMPO->gField();
 
-   this->isMagneticField = (fabs(theField) < 1.0e-15) ? false : true;
+   this->isMagneticField = (abs(theField) < 1.0e-15) ? false : true;
 
    //make the single site propagators
    H1Prop = new complex<double> [phys_d*phys_d];
@@ -92,28 +97,26 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    //for e^Sx and e^Sy we need the eigenvalues and eigenvectors of Sx and Sy to construct the propagator
    eig = new double [phys_d];
 
-   int clwork = 3*phys_d - 1;
+   lwork = 3*phys_d - 1;
+   work = new complex<double> [lwork];
 
-   complex<double> *cwork = new complex<double> [clwork];
-
-   int rlwork = 3*phys_d - 2;
-
-   double *rwork = new double [rlwork];
+   rlwork = 3*phys_d - 2;
+   rwork = new double [rlwork];
 
    for(int i = 0;i < phys_d;++i)
       for(int j = 0;j < phys_d;++j)
          Sx_vec[j*phys_d + i] = (*Sx)(i,j);
 
-   zheev_(&jobz,&uplo,&phys_d,Sx_vec,&phys_d,eig,cwork,&clwork,rwork,&info);
+   zheev_(&jobz,&uplo,&phys_d,Sx_vec,&phys_d,eig,work,&lwork,rwork,&info);
 
    //Finally Sy
    for(int i = 0;i < phys_d;++i)
       for(int j = 0;j < phys_d;++j)
          Sy_vec[j*phys_d + i] = (*Sy)(i,j);
 
-   zheev_(&jobz,&uplo,&phys_d,Sy_vec,&phys_d,eig,cwork,&clwork,rwork,&info);
+   zheev_(&jobz,&uplo,&phys_d,Sy_vec,&phys_d,eig,work,&lwork,rwork,&info);
 
-   delete [] cwork;
+   delete [] work;
    delete [] rwork;
 
    AFProp = new complex<double> [length * phys_d * phys_d];
@@ -147,7 +150,7 @@ bool TrotterHeisenberg::gIsMagneticField() const {
 
 }
 
-double TrotterHeisenberg::gField() const {
+complex<double> TrotterHeisenberg::gField() const {
 
    return theField; 
 
@@ -156,7 +159,7 @@ double TrotterHeisenberg::gField() const {
 /**
  * @return the j'th index of the k'th eigenvector of the couplingMatrix
  */
-double TrotterHeisenberg::gJ(const int k, const int i) const {
+complex<double> TrotterHeisenberg::gJ(const int k, const int i) const {
 
    return J[ k*length + i ]; 
 

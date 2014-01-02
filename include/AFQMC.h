@@ -1,27 +1,26 @@
-#ifndef MPSQMC2_H
-#define MPSQMC2_H
+#ifndef AFQMC_H
+#define AFQMC_H
 
 #include "MPSstate.h"
 #include "HeisenbergMPO.h"
-#include "DMRG.h"
 #include "TrotterHeisenberg.h"
-#include "GridGenerator.h"
 #include "Walker.h"
+#include <vector>
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 15, 2013 */
 
-class MPSQMC2{
+class AFQMC{
 
    public:
    
       //Constructor
-      MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau);
+      AFQMC(HeisenbergMPO * theMPO,Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau);
 
       //constructor with input trialwavefunction
-      MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
+      AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
       
       //Destructor
-      ~MPSQMC2();
+      ~AFQMC();
       
       //Let the walkers propagate for steps steps
       void Walk(const int steps);
@@ -37,9 +36,6 @@ class MPSQMC2{
       
       //The Trotter decomposition of the MPO
       TrotterHeisenberg * theTrotter;
-      
-      //The grid generator
-      GridGenerator * theGrid;
       
       //The random number generator
       Random * RN;
@@ -76,7 +72,7 @@ class MPSQMC2{
       void PopulationBalancing();
       
       //Calculate the single walker projected energies, update the energy history, calculate the fluctuation metric, and the total projected energy
-      double EnergyFunctionAndHistory(const int step, double * projectedEnergy, bool doFluctuationMetric=true);
+      double EnergyFunctionAndHistory(const int step, double * projectedEnergy);
       
       //BubbleSort algorithm. Modifies order so that for all index: values[ order[index] ] >= values[ order[index+1] ].
       void BubbleSort(double * values, int * order, const int length);
@@ -94,33 +90,18 @@ class MPSQMC2{
       //MPO times trial wfn (one per thread)
       MPSstate ** HPsi0;
       
-      //Specific Trotter terms (hermitian conjugate!!) times trial wfn: TrotterTermsTimesPsi0[thread][coupling][ firstOp + d*d* secondOp ]
-      MPSstate **** TrotterTermsTimesPsi0;
-      
-      //Number of non-zero couplings
-      int nCouplings;
-      
-      //First index of coupling
-      int * firstIndexCoupling;
-      
-      //Second index of coupling
-      int * secondIndexCoupling;
-      
-      //Size of the two-site operator SVD decomposition (d*d)
-      int trotterSVDsize;
+      //Auxiliary field terms (hermitian conjugate!!) times trial wfn: TrotterTermsTimesPsi0[thread][coupling][ firstOp + d*d* secondOp ]
+      MPSstate *** VPsi0;
       
       //Setup the trial wfn
-      void SetupTrial(bool dmrg_flag);
+      void SetupTrial();
       
       /******************
       *** The walkers ***
       ******************/
       
       //The walkers
-      Walker ** theWalkers;
-      
-      //The walkers: copy array
-      Walker ** theWalkersCopyArray;
+      std::vector<Walker*> theWalkers;
       
       //Setup the walkers
       void SetupWalkers();
@@ -153,12 +134,6 @@ class MPSQMC2{
       /************************************************************************************************************
       *** Some variables which are needed at each MC step, so that they don't need to be reallocated every time ***
       ************************************************************************************************************/
-      
-      //Workspace to temporarily store the PDF in for different possible moves per Trotter term
-      double ** thePDF;
-      
-      //Workspace to temporarily store the different left and right operator combinations per Trotter term in
-      double ** theOperatorCombos;
       
       //To keep track of the sum of the walker coeff
       double * sumWalkerWeightPerThread;

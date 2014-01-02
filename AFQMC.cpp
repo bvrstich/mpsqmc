@@ -6,25 +6,24 @@
 #include <fstream>
 #include <math.h>
 #include <omp.h>
+#include <vector>
 
-#include "MPSQMC2.h"
+#include "AFQMC.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 15, 2013 */
 using namespace std;
 
 /**
- * constructor of the MPSQMC2 object, takes input parameters that define the QMC walk.
+ * constructor of the AFQMC object, takes input parameters that define the QMC walk.
  * @param theMPO MPO containing relevant matrix elements, defines system being studied
- * @param theGrid Generates a grid for the random picking of terms from the two-site trotter MPO's
- * @param Dtrunc dimension of the trialstate
- * @param Dtrunc dimension of the walkers
+ * @param DT dimension of the trialstate
+ * @param DW dimension of the walkers
  * @param Nwalkers number of Walker states
  * @param dtau time step of each evolution
  */
-MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau){
+AFQMC::AFQMC(HeisenbergMPO * theMPO,Random * RN, const int DT,const int DW, const int Nwalkers, const double dtau){
 
    this->theMPO = theMPO;
-   this->theGrid = theGrid;
    this->RN = RN;
    this->DT = DT;
    this->DW = DW;
@@ -34,7 +33,7 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
 
    this->totalNDesiredWalkers = Nwalkers;
    this->totalNCurrentWalkers = Nwalkers;
-
+/*
    SetupOMPandMPILoadDistribution();
 
    myMaxNWalkers = max(1000,3*NDesiredWalkersPerRank[MPIrank]);
@@ -52,11 +51,11 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
 #endif
 
    SetupWalkers();
-
+*/
 }
 
 /**
- * constructor of the MPSQMC2 object, takes input parameters that define the QMC walk.
+ * constructor of the AFQMC object, takes input parameters that define the QMC walk.
  * @param theMPO MPO containing relevant matrix elements, defines system being studied
  * @param theGrid Generates a grid for the random picking of terms from the two-site trotter MPO's
  * @param Psi0 input trialwavefunction
@@ -64,7 +63,8 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, c
  * @param Nwalkers number of Walker states
  * @param dtau time step of each evolution
  */
-MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
+ /*
+AFQMC::AFQMC(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
 
    this->theMPO = theMPO;
    this->theGrid = theGrid;
@@ -101,7 +101,7 @@ MPSQMC2::MPSQMC2(HeisenbergMPO * theMPO, GridGenerator * theGrid, Random * RN, M
 
 }
 
-void MPSQMC2::SetupOMPandMPILoadDistribution(){
+void AFQMC::SetupOMPandMPILoadDistribution(){
 
    //Find the maximum number of threads for this process
 #ifdef _OPENMP
@@ -170,12 +170,12 @@ void MPSQMC2::SetupOMPandMPILoadDistribution(){
 
 }
 
-MPSQMC2::~MPSQMC2(){
+AFQMC::~AFQMC(){
 
-   //MPSQMC2::MPSQMC2
+   //AFQMC::AFQMC
    delete theTrotter;
 
-   //MPSQMC2::SetupTrial
+   //AFQMC::SetupTrial
    for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){
       for (int cnt2=0; cnt2<nCouplings; cnt2++){
          for (int cnt3=0; cnt3<trotterSVDsize*trotterSVDsize; cnt3++){ delete TrotterTermsTimesPsi0[cnt][cnt2][cnt3]; }
@@ -193,7 +193,7 @@ MPSQMC2::~MPSQMC2(){
    delete [] firstIndexCoupling;
    delete [] secondIndexCoupling;
 
-   //MPSQMC2::SetupWalkers
+   //AFQMC::SetupWalkers
    for (int cnt=0; cnt<NCurrentWalkersPerRank[MPIrank]; cnt++){ delete theWalkers[cnt]; }
    delete [] theWalkers;
    delete [] theWalkersCopyArray;
@@ -205,17 +205,18 @@ MPSQMC2::~MPSQMC2(){
    delete [] theOperatorCombos;
    delete [] sumWalkerWeightPerThread;
 
-   //MPSQMC2::SetupOMPandMPILoadDistribution
+   //AFQMC::SetupOMPandMPILoadDistribution
    delete [] NThreadsPerRank;
    delete [] NDesiredWalkersPerRank;
    delete [] NCurrentWalkersPerRank;
 
 }
-
+*/
 /**
- * construct the trial wavefunction by performing a DMRG calculation
+ * construct the trial wavefunction
  */
-void MPSQMC2::SetupTrial(bool dmrg_flag){
+ /*
+void AFQMC::SetupTrial(){
 
    if(MPIrank==0){
 
@@ -329,11 +330,12 @@ void MPSQMC2::SetupTrial(bool dmrg_flag){
    }
 
 }
-
+*/
 /** 
  * different function
  */
-MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
+ /*
+MPSstate * AFQMC::BroadcastCopyConstruct(MPSstate * pointer){
 
 #ifdef USE_MPI_IN_MPSQMC
    //Make the Psi storage exactly the same as rank 0 Psi storage
@@ -373,11 +375,12 @@ MPSstate * MPSQMC2::BroadcastCopyConstruct(MPSstate * pointer){
    return pointer;
 
 }
-
+*/
 /**
  * initialize the walkers
  */
-void MPSQMC2::SetupWalkers(){
+ /*
+void AFQMC::SetupWalkers(){
 
    const bool copyTrial = true;
 
@@ -447,7 +450,7 @@ void MPSQMC2::SetupWalkers(){
 
 }
 
-void MPSQMC2::Walk(const int steps){
+void AFQMC::Walk(const int steps){
 
    double projectedEnergy = 0.0;
 
@@ -518,11 +521,12 @@ void MPSQMC2::Walk(const int steps){
    }
 
 }
-
+*/
 /**
  * Here the trotter terms, propagator terms are applied to every walker individually.
  */
-double MPSQMC2::PropagateSeparately(){
+ /*
+double AFQMC::PropagateSeparately(){
 
    for(int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++)
       sumWalkerWeightPerThread[cnt] = 0.0;
@@ -617,7 +621,7 @@ double MPSQMC2::PropagateSeparately(){
 
 }
 
-void MPSQMC2::SeparatePopulationControl(const double scaling){
+void AFQMC::SeparatePopulationControl(const double scaling){
 
    const bool debugPrint = true;
 
@@ -692,7 +696,7 @@ void MPSQMC2::SeparatePopulationControl(const double scaling){
 
 }
 
-double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnergy, bool doFluctuationMetric){
+double AFQMC::EnergyFunctionAndHistory(const int step, double * projectedEnergy, bool doFluctuationMetric){
 
    double fluctMetric_sumOfESq = 0.0; //Per MPI rank
    double fluctMetric_sumOfE   = 0.0; //Per MPI rank
@@ -753,7 +757,7 @@ double MPSQMC2::EnergyFunctionAndHistory(const int step, double * projectedEnerg
 
 }
 
-void MPSQMC2::write(const int step,const int nwalkers,const double projectedEnergy, const double targetEnergy, const double fluctMetric){
+void AFQMC::write(const int step,const int nwalkers,const double projectedEnergy, const double targetEnergy, const double fluctMetric){
 
    char filename[100];
    sprintf(filename,"output/Heisenberg1D/ener_L%dDT%dDW%d.txt",theMPO->gLength(),DT,DW);
@@ -764,7 +768,7 @@ void MPSQMC2::write(const int step,const int nwalkers,const double projectedEner
 
 }
 
-void MPSQMC2::BubbleSort(double * values, int * order, const int length){
+void AFQMC::BubbleSort(double * values, int * order, const int length){
 
    for (int cnt=0; cnt<length; cnt++){ order[cnt] = cnt; }
    bool allOK = false;
@@ -782,7 +786,7 @@ void MPSQMC2::BubbleSort(double * values, int * order, const int length){
 
 }
 
-void MPSQMC2::PopulationBalancing(){
+void AFQMC::PopulationBalancing(){
 
 #ifdef USE_MPI_IN_MPSQMC
    const bool debuginfoprint = true;
@@ -939,3 +943,4 @@ void MPSQMC2::PopulationBalancing(){
 #endif
 
 }
+*/

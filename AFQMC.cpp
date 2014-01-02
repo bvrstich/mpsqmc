@@ -47,7 +47,7 @@ AFQMC::AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW
    //copy Psi0 into the rank 0:
    Psi0[0] = new MPSstate(Psi0_in);
 
-   SetupTrial(false);
+   SetupTrial();
 /*
 #ifdef USE_MPI_IN_MPSQMC
    MPI::COMM_WORLD.Barrier();
@@ -132,13 +132,16 @@ AFQMC::~AFQMC(){
    delete theTrotter;
 
    //AFQMC::SetupTrial
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++)
+   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){
+
       delete Psi0[cnt];
+      delete HPsi0[cnt];
+
+   }
 
    delete [] Psi0;
-   /*
    delete [] HPsi0;
-
+/*
    //AFQMC::SetupWalkers
    for (int cnt=0; cnt<NCurrentWalkersPerRank[MPIrank]; cnt++){ delete theWalkers[cnt]; }
    delete [] theWalkers;
@@ -164,7 +167,7 @@ AFQMC::~AFQMC(){
 void AFQMC::SetupTrial(){
 
    if(MPIrank==0)
-         Psi0[0]->LeftNormalize();
+      Psi0[0]->LeftNormalize();
 
 #ifdef USE_MPI_IN_MPSQMC
    Psi0[0] = BroadcastCopyConstruct(Psi0[0]);
@@ -191,72 +194,8 @@ void AFQMC::SetupTrial(){
    for(int cnt = 1;cnt < NThreadsPerRank[MPIrank];cnt++)
       HPsi0[cnt] = new MPSstate(HPsi0[0]);
 
-   //Find the number and the indices of the non-zero couplings, as well as the Trotter SVD size
-   nCouplings = 0;
-
-   for (int first=0; first<theMPO->gLength()-1; first++)
-      for (int second=first+1; second<theMPO->gLength(); second++){
-
-         double coupling = theTrotter->gCoupling(first,second);
-
-         if (coupling != 0.0)
-            nCouplings++;
-
-      }
-
-   firstIndexCoupling  = new int [nCouplings];
-   secondIndexCoupling = new int [nCouplings];
-
-   nCouplings = 0;
-
-   for(int first = 0;first < theMPO->gLength() - 1;first++)
-      for(int second = first + 1;second < theMPO->gLength();second++){
-
-         double coupling = theTrotter->gCoupling(first,second);
-
-         if(coupling != 0.0){
-
-            firstIndexCoupling[nCouplings]  = first;
-            secondIndexCoupling[nCouplings] = second;
-            nCouplings++;
-
-         }
-
-      }
-
-   trotterSVDsize = theMPO->gPhys_d() * theMPO->gPhys_d();
-
-   //Multiply for all possible combinations of the SVD decomposition of the two-site Trotter terms, its hermitian conjugate into the trial
-   TrotterTermsTimesPsi0 = new MPSstate***[ NThreadsPerRank[MPIrank] ];
-
-   for(int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++){
-
-      TrotterTermsTimesPsi0[cnt] = new MPSstate ** [nCouplings];
-
-      for(int cnt2 = 0;cnt2 < nCouplings;cnt2++){//loop over the different couplings <ij>
-
-         TrotterTermsTimesPsi0[cnt][cnt2] = new MPSstate*[trotterSVDsize*trotterSVDsize];//d^2 x d^2 different MPS's
-
-         for (int cnt3 = 0;cnt3 < trotterSVDsize;cnt3++)
-            for (int cnt4 = 0;cnt4 < trotterSVDsize;cnt4++){
-
-               if (cnt==0){//apply
-
-                  TrotterTermsTimesPsi0[cnt][cnt2][cnt3 + trotterSVDsize * cnt4] = new MPSstate(Psi0[cnt]);
-                  TrotterTermsTimesPsi0[cnt][cnt2][cnt3 + trotterSVDsize * cnt4]->ApplyTwoSiteTrotterTerm(theTrotter, firstIndexCoupling[cnt2], secondIndexCoupling[cnt2], cnt3, cnt4, true); //true for HC!!
-
-               }
-               else//copy
-                  TrotterTermsTimesPsi0[cnt][cnt2][cnt3 + trotterSVDsize * cnt4] = new MPSstate(TrotterTermsTimesPsi0[0][cnt2][cnt3 + trotterSVDsize * cnt4]);
-
-            }
-
-      }
-
-   }
-
 }
-*/
+
 /** 
  * different function
  */

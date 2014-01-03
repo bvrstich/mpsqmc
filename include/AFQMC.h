@@ -69,7 +69,7 @@ class AFQMC{
       void PopulationBalancing();
       
       //Calculate the single walker projected energies, update the energy history, calculate the fluctuation metric, and the total projected energy
-      double EnergyFunctionAndHistory(const int step, double * projectedEnergy);
+      double gEP();
       
       //BubbleSort algorithm. Modifies order so that for all index: values[ order[index] ] >= values[ order[index+1] ].
       void BubbleSort(double * values, int * order, const int length);

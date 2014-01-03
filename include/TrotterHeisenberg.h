@@ -37,17 +37,14 @@ class TrotterHeisenberg{
       //Get the single-site propagator element Op(i,j)
       complex<double> gH1Prop(const int i, const int j) const;
 
-      complex<double> gAFProp(int site,const int i, const int j) const;
+      complex<double> gAFProp(int myID,int site,const int i, const int j) const;
 
-      void fillAFProp(int k,int r,double x);
+      void fillAFProp(int myID,int k,int r,complex<double> x);
 
       AFMPO *gV_Op(int k,int r);
       
    private:
    
-      //Debug print
-      static const bool debugPrint = true;
-      
       //The chain length
       int length;
       
@@ -85,7 +82,7 @@ class TrotterHeisenberg{
       complex<double> *H1Prop;
 
       //!the auxiliary-field propagators
-      complex<double> *AFProp;
+      complex<double> **AFProp;
       
       double *Jeig;
       

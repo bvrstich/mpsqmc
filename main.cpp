@@ -30,7 +30,7 @@ int main(int argc,char *argv[]){
 
    int L = 20;
    int DT = 4;
-   int DW = 2;
+   int DW = 4;
    int d = 2;
 
    HeisenbergMPO theMPO(L,d);
@@ -45,10 +45,11 @@ int main(int argc,char *argv[]){
    MPSstate Psi0("debug.mps",&RN);
 
    int Nwalkers = 1000;
-   double dtau = 0.01;
-   int nSteps = 10000;
+   double dtau = 0.001;
+   int nSteps = 1;
 
    AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
+   thePopulation.Walk(nSteps);
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

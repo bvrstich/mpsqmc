@@ -85,7 +85,7 @@ class MPSstate{
       void ApplyH1(TrotterHeisenberg * theTrotter);
 
       //apply the auxiliary field
-      void ApplyAF(int k,int r,double x,TrotterHeisenberg * theTrotter);
+      void ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrotter);
       
       //Check whether the work arrays are allocated with at least size size
       void checkWork1(const int size);

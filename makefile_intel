@@ -18,12 +18,13 @@ CPPSRC	= main.cpp\
            Op0.cpp\
            MPO.cpp\
            HeisenbergMPO.cpp\
+           AFMPO.cpp\
            MPStensor.cpp\
            TwoSiteObject.cpp\
            MPSstate.cpp\
            Walker.cpp\
            TrotterHeisenberg.cpp\
-           AFSQMC.cpp
+           AFQMC.cpp
 
 OBJ	= $(CPPSRC:.cpp=.o)
 
@@ -35,7 +36,7 @@ THIS_FOLDER = .
 
 INCLUDE = ./include
 
-LIBS = -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
+LIBS = -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -liomp5 -lpthread
 
 CC  = icc
 CXX = icpc

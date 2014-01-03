@@ -10,7 +10,7 @@ class Walker{
    public:
    
       //Constructor copying an MPSstate
-      Walker(MPSstate * theState, const complex<double> overlap, const double weight);
+      Walker(MPSstate * theState, const double weight);
       
       //Constructor copying an entire Walker
       Walker(Walker * theWalker);
@@ -40,6 +40,14 @@ class Walker{
       void sOverlap(MPSstate *Psi0);
 
       void sEL(MPSstate *HPsi0);
+
+      void sVL(MPSstate **VPsi0);
+
+      void update_weight(double dtau,MPSstate *HPsi0);
+
+      complex<double> gEL() const;
+
+      complex<double> gVL(int,int) const;
       
    private:
    

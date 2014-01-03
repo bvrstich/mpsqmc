@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <iostream>
+#include "omp.h"
 
 #include "TrotterHeisenberg.h"
 #include "OpSz.h"
@@ -9,7 +10,6 @@
 #include "Lapack.h"
 
 using namespace std;
-const bool TrotterHeisenberg::debugPrint;
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 14, 2013 */
 
@@ -119,7 +119,17 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    delete [] work;
    delete [] rwork;
 
-   AFProp = new complex<double> [length * phys_d * phys_d];
+   //Find the maximum number of threads for this process
+#ifdef _OPENMP
+   const int myNOMPthreads = omp_get_max_threads();
+#else
+   const int myNOMPthreads = 1;
+#endif
+
+   AFProp = new complex<double> * [myNOMPthreads];
+   
+   for(int thr = 0;thr < myNOMPthreads;++thr)
+      AFProp[thr] = new complex<double> [length * phys_d * phys_d];
 
    //finally construct the auxiliary field operators as MPO's:
    V_Op = new AFMPO * [3*length];
@@ -146,6 +156,15 @@ TrotterHeisenberg::~TrotterHeisenberg(){
    delete [] eig;
    delete [] Sx_vec;
    delete [] Sy_vec;
+
+#ifdef _OPENMP
+   const int myNOMPthreads = omp_get_max_threads();
+#else
+   const int myNOMPthreads = 1;
+#endif
+
+   for(int thr = 0;thr < myNOMPthreads;++thr)
+      delete [] AFProp[thr];
 
    delete [] AFProp;
 
@@ -217,9 +236,9 @@ complex<double> TrotterHeisenberg::gH1Prop(int i,int j) const {
 /**
  * @return the propagator matrix for the H1
  */
-complex<double> TrotterHeisenberg::gAFProp(int site,int i,int j) const {
+complex<double> TrotterHeisenberg::gAFProp(int myID,int site,int i,int j) const {
 
-   return AFProp[site*phys_d*phys_d + j*phys_d + i];
+   return AFProp[myID][site*phys_d*phys_d + j*phys_d + i];
 
 }
 
@@ -227,9 +246,9 @@ complex<double> TrotterHeisenberg::gAFProp(int site,int i,int j) const {
  * fill the AFProp array with the correct propagator
  * @param k index of eigenvectors of J
  * @param r type of operator, x,y or z
- * @param x auxiliary field variable
+ * @param x shifted auxiliary field variable
  */
-void TrotterHeisenberg::fillAFProp(int k,int r,double x){
+void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
 
    if(r == 0){//x
 
@@ -238,10 +257,10 @@ void TrotterHeisenberg::fillAFProp(int k,int r,double x){
          for(int i = 0;i < phys_d;++i)
             for(int j = 0;j < phys_d;++j){
 
-               AFProp[site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
+               AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
                for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
-                  AFProp[site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
+                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
 
             }
 
@@ -255,10 +274,10 @@ void TrotterHeisenberg::fillAFProp(int k,int r,double x){
          for(int i = 0;i < phys_d;++i)
             for(int j = 0;j < phys_d;++j){
 
-               AFProp[site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
+               AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
                for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
-                  AFProp[site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
+                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
 
             }
 
@@ -267,10 +286,16 @@ void TrotterHeisenberg::fillAFProp(int k,int r,double x){
    }
    else{//z
 
+      //Sz is diagonal in the basis, so this is easy
       for(int site = 0;site < length;++site)
-         for(int i = 0;i < phys_d;++i)
-            for(int j = 0;j < phys_d;++j)
-               AFProp[site*phys_d*phys_d + j*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,j) );
+         for(int i = 0;i < phys_d;++i){
+
+            AFProp[myID][site*phys_d*phys_d + i*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,i) );
+
+            for(int j = i + 1;j < phys_d;++j)
+               AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = AFProp[myID][site*phys_d*phys_d + i*phys_d + j] = complex<double>(0.0,0.0);
+
+         }
 
    }
 

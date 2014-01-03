@@ -79,7 +79,7 @@ class MPSstate{
       }
       
       //Do H * Psi0 and store in this object
-      void ApplyMPO(MPO * theMPO, MPSstate * Psi0);
+      void ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0);
       
       //Apply the single-site Trotter term on each site
       void ApplyH1(TrotterHeisenberg * theTrotter);

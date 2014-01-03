@@ -7,15 +7,13 @@
 # -----------------------------------------------------------------------------
 #   Sources for all modules
 # -----------------------------------------------------------------------------
-BINNAME = MPSQMC2
+BINNAME = mpsqmc
 CPPSRC	= main.cpp\
            Random.cpp\
            Operator.cpp\
            OpSx.cpp\
-           OpISy.cpp\
+           OpSy.cpp\
            OpSz.cpp\
-           OpSup.cpp\
-           OpSdown.cpp\
            OpI.cpp\
            Op0.cpp\
            MPO.cpp\
@@ -23,12 +21,9 @@ CPPSRC	= main.cpp\
            MPStensor.cpp\
            TwoSiteObject.cpp\
            MPSstate.cpp\
-           DMRG.cpp\
-           MPSQMC.cpp\
            Walker.cpp\
            TrotterHeisenberg.cpp\
-           GridGenerator.cpp\
-           MPSQMC2.cpp
+           AFSQMC.cpp
 
 OBJ	= $(CPPSRC:.cpp=.o)
 
@@ -48,8 +43,8 @@ CXX = icpc
 # -----------------------------------------------------------------------------
 #   Compiler & Linker flags
 # -----------------------------------------------------------------------------
-CFLAGS = -g -I$(INCLUDE) -I$(INCLUDE2) -Wall -openmp
-LDFLAGS	= -g -Wall
+CFLAGS = -I$(INCLUDE) -O3 -ipo -openmp
+LDFLAGS	= -O3 -ipo -openmp
 
 
 # =============================================================================

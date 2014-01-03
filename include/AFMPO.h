@@ -27,7 +27,7 @@ class AFMPO : public MPO{
       AFMPO(const int length, const int phys_d,int,complex<double> *);
       
       //Destructor
-      ~AFMPO();
+      virtual ~AFMPO();
       
       //Fill MPOdimensions
       void fillMPOdimensions();

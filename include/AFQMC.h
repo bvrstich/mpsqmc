@@ -82,13 +82,13 @@ class AFQMC{
       ****************************/
       
       //Trial wfn (one per thread)
-      MPSstate ** Psi0;
+      MPSstate * Psi0;
       
       //MPO times trial wfn (one per thread)
-      MPSstate ** HPsi0;
+      MPSstate * HPsi0;
       
-      //Auxiliary field terms (hermitian conjugate!!) times trial wfn: TrotterTermsTimesPsi0[thread][coupling][ firstOp + d*d* secondOp ]
-      MPSstate *** VPsi0;
+      //Auxiliary field terms (hermitian conjugate!!) times trial wfn. 
+      MPSstate ** VPsi0;
       
       //Setup the trial wfn
       void SetupTrial();
@@ -101,7 +101,7 @@ class AFQMC{
       std::vector<Walker*> theWalkers;
       
       //Setup the walkers
-      void SetupWalkers();
+      void SetupWalkers(bool);
       
       /***************************************************
       *** For MPI: some helper variables and functions ***
@@ -127,13 +127,6 @@ class AFQMC{
       
       //Set the OpenMP and MPI load distribution
       void SetupOMPandMPILoadDistribution();
-      
-      /************************************************************************************************************
-      *** Some variables which are needed at each MC step, so that they don't need to be reallocated every time ***
-      ************************************************************************************************************/
-      
-      //To keep track of the sum of the walker coeff
-      double * sumWalkerWeightPerThread;
       
 };
 

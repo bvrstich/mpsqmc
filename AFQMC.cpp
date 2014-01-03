@@ -42,19 +42,16 @@ AFQMC::AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW
    MPI::COMM_WORLD.Barrier();
 #endif
 
-   Psi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
-
-   //copy Psi0 into the rank 0:
-   Psi0[0] = new MPSstate(Psi0_in);
+   Psi0 = new MPSstate(Psi0_in);
 
    SetupTrial();
-/*
+
 #ifdef USE_MPI_IN_MPSQMC
    MPI::COMM_WORLD.Barrier();
 #endif
 
-   SetupWalkers();
-*/
+   SetupWalkers(true);
+
 }
 
 void AFQMC::SetupOMPandMPILoadDistribution(){
@@ -72,7 +69,7 @@ void AFQMC::SetupOMPandMPILoadDistribution(){
    MPIrank = MPI::COMM_WORLD.Get_rank();
 
    //Finding out how many threads are running for each process, as well as the total amount
-   NThreadsPerRank          = new int[MPIsize];
+   NThreadsPerRank          = new int [MPIsize];
    NThreadsPerRank[MPIrank] = myNOMPthreads;
 
    int totalNOMPthreads = 0;
@@ -132,28 +129,18 @@ AFQMC::~AFQMC(){
    delete theTrotter;
 
    //AFQMC::SetupTrial
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){
+   delete Psi0;
+   delete HPsi0;
 
-      delete Psi0[cnt];
-      delete HPsi0[cnt];
+   for(int k = 0;k < 3*theMPO->gLength();++k)
+      delete VPsi0[k];
 
-   }
+   delete [] VPsi0;
 
-   delete [] Psi0;
-   delete [] HPsi0;
-/*
    //AFQMC::SetupWalkers
-   for (int cnt=0; cnt<NCurrentWalkersPerRank[MPIrank]; cnt++){ delete theWalkers[cnt]; }
-   delete [] theWalkers;
-   delete [] theWalkersCopyArray;
-   for (int cnt=0; cnt<NThreadsPerRank[MPIrank]; cnt++){
-      delete [] thePDF[cnt];
-      delete [] theOperatorCombos[cnt];
-   }
-   delete [] thePDF;
-   delete [] theOperatorCombos;
-   delete [] sumWalkerWeightPerThread;
-*/
+   for (int cnt = 0;cnt < theWalkers.size(); cnt++)
+      delete theWalkers[cnt];
+
    //AFQMC::SetupOMPandMPILoadDistribution
    delete [] NThreadsPerRank;
    delete [] NDesiredWalkersPerRank;
@@ -167,39 +154,56 @@ AFQMC::~AFQMC(){
 void AFQMC::SetupTrial(){
 
    if(MPIrank==0)
-      Psi0[0]->LeftNormalize();
+      Psi0->LeftNormalize();
 
 #ifdef USE_MPI_IN_MPSQMC
-   Psi0[0] = BroadcastCopyConstruct(Psi0[0]);
+   Psi0 = BroadcastCopyConstruct(Psi0);
 #endif
 
-   for(int cnt = 1;cnt < NThreadsPerRank[MPIrank];cnt++)
-      Psi0[cnt] = new MPSstate(Psi0[0]);
-
    //Rank 0 calculates MPO times trial, and the result gets copied so every thread on every rank has 1 copy.
-   HPsi0 = new MPSstate * [NThreadsPerRank[MPIrank]];
-
    if(MPIrank==0){
 
-      HPsi0[0] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-      HPsi0[0]->ApplyMPO(theMPO, Psi0[0]);
-      HPsi0[0]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+      HPsi0 = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+      HPsi0->ApplyMPO(false,theMPO, Psi0);
+      HPsi0->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
    }
 
 #ifdef USE_MPI_IN_MPSQMC
-   HPsi0[0] = BroadcastCopyConstruct(HPsi0[0]);
+   HPsi0 = BroadcastCopyConstruct(HPsi0);
 #endif
 
-   for(int cnt = 1;cnt < NThreadsPerRank[MPIrank];cnt++)
-      HPsi0[cnt] = new MPSstate(HPsi0[0]);
+   //now Apply the hermitian conjugate of the V's times trialstate
+   if(MPIrank==0){
+
+      int length = theMPO->gLength();
+
+      VPsi0 = new MPSstate * [3*length];
+
+      for(int r = 0;r < 3;++r)
+         for(int k = 0;k < length;++k){
+
+         VPsi0[r*length + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+         
+         VPsi0[r*length + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
+         VPsi0[r*length + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+
+      }
+
+   }
+
+#ifdef USE_MPI_IN_MPSQMC
+   for(int r = 0;r < 3;++r)
+      for(int k = 0;k < length;++k)
+         VPsi0[r*length + k] = BroadcastCopyConstruct(VPsi0[r*length + k]);
+#endif
+
 
 }
 
 /** 
  * different function
  */
- /*
 MPSstate * AFQMC::BroadcastCopyConstruct(MPSstate * pointer){
 
 #ifdef USE_MPI_IN_MPSQMC
@@ -240,46 +244,22 @@ MPSstate * AFQMC::BroadcastCopyConstruct(MPSstate * pointer){
    return pointer;
 
 }
-*/
+
 /**
  * initialize the walkers
  */
- /*
-void AFQMC::SetupWalkers(){
+void AFQMC::SetupWalkers(bool copyTrial){
 
-   const bool copyTrial = true;
-
-   theWalkers          = new Walker * [myMaxNWalkers];
-   theWalkersCopyArray = new Walker * [myMaxNWalkers];
-
-   thePDF            = new double * [NThreadsPerRank[MPIrank]];
-   theOperatorCombos = new double * [NThreadsPerRank[MPIrank]];
-
-   for(int cnt = 0;cnt < NThreadsPerRank[MPIrank];cnt++){
-
-      thePDF[cnt]            = new double [theGrid->gNPoints()];
-      theOperatorCombos[cnt] = new double [trotterSVDsize * trotterSVDsize];
-
-   }
-
-   sumWalkerWeightPerThread = new double [NThreadsPerRank[MPIrank]];
+   theWalkers.resize(NCurrentWalkersPerRank[MPIrank]);
 
    if(copyTrial){
 
-      theWalkers[0] = new Walker(Psi0[0],1.0,1.0,0.0);
+      theWalkers[0] = new Walker(Psi0,complex<double>(1.0,0.0),1.0);
 
       if(DW < DT){
 
          theWalkers[0]->gState()->CompressState(DW);//compress the state to Walker D
-         theWalkers[0]->setOverlap(Psi0[0]);
-
-         //test
-         MPSstate tmp(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-         tmp.ApplyMPO(theMPO, theWalkers[0]->gState());
-
-         cout << theWalkers[0]->gOverlap() << endl;
-         cout << tmp.InnerProduct(theWalkers[0]->gState()) << endl;
-         cout << theWalkers[0]->gState()->InnerProduct(theWalkers[0]->gState()) << endl;
+         theWalkers[0]->sOverlap(Psi0);
 
       }
 
@@ -287,34 +267,25 @@ void AFQMC::SetupWalkers(){
    else{
 
       theWalkers[0] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), RN);
-      theWalkers[0]->setOverlap(Psi0[0]);
+      theWalkers[0]->sOverlap(Psi0);
 
    }
 
-   for(int cnt = 1;cnt < NCurrentWalkersPerRank[MPIrank];cnt++){
+   for(int cnt = 1;cnt < theWalkers.size();cnt++){
 
       if(copyTrial)
          theWalkers[cnt] = new Walker(theWalkers[0]);
       else{
 
          theWalkers[cnt] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), RN);
-         theWalkers[cnt]->setOverlap(Psi0[0]);
+         theWalkers[cnt]->sOverlap(Psi0);
 
       }
-
-      theWalkersCopyArray[cnt] = NULL;
-
-   }
-
-   for(int cnt=NCurrentWalkersPerRank[MPIrank]; cnt<myMaxNWalkers;cnt++){
-
-      theWalkers[cnt] = NULL;
-      theWalkersCopyArray[cnt] = NULL;
 
    }
 
 }
-
+/*
 void AFQMC::Walk(const int steps){
 
    double projectedEnergy = 0.0;

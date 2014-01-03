@@ -384,7 +384,10 @@ void MPSstate::CompressState(const int truncD){
       VirtualD[cnt+1] = the2siteObject->Decompose(theTensors[cnt], theTensors[cnt+1], truncD, false, true);
    }
 
-   Dtrunc = truncD;
+   //new D
+   for(int i = 0;i < length;++i)
+      if(VirtualD[i] > Dtrunc)
+         Dtrunc = VirtualD[i];
 
 }
 
@@ -395,10 +398,14 @@ void MPSstate::printVdim() const {
 
 }
 
-void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
-   
+/**
+ * Apply an MPO to an MPS and get another MPS. H\Psi> = \phi>
+ * @param conj if true use the hermitian conjugate of the MPO
+ */
+void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
+ 
    //Readjust the dimensions
-   for(int cnt=1; cnt<length; cnt++) 
+   for(int cnt=1; cnt<length; cnt++)
       VirtualD[cnt] = theMPO->dimL(cnt) * Psi0->gDimAtBound(cnt);
 
    for(int cnt=0; cnt<length; cnt++){
@@ -409,6 +416,7 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
 
       for (int cnt2=0; cnt2<dim; cnt2++) 
          temp[cnt2] = 0.0;  //Storage is put to zero. If "AmIOp0()==true", then nothing should be done.
+
    }
 
    Dtrunc = 1;
@@ -424,7 +432,7 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
 
       const int dimLmpo = theMPO->dimL(site);
       const int dimRmpo = theMPO->dimR(site);
-      
+
       for (int MPOleft = 0; MPOleft < dimLmpo; MPOleft++)
          for (int MPOright = 0; MPOright < dimRmpo; MPOright++){
 
@@ -432,7 +440,10 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
 
             if (!(theOp->AmIOp0())){
 
-               const complex<double> factor = theMPO->gPrefactor(site,MPOleft,MPOright);
+               complex<double> factor = theMPO->gPrefactor(site,MPOleft,MPOright);
+
+               if(conj)
+                  factor = std::conj(factor);
 
                for(int phys_up = 0;phys_up < phys_d;phys_up++){//physical index of the resultant MPStensor: i.e. upper index of the MPO
 
@@ -453,7 +464,13 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
 
                      for(int phys_down = 0;phys_down < phys_d;phys_down++){//loop over the lower physical index of the MPO: this will be contracted with the phys index of the original MPStensor
 
-                        const complex<double> factorbis = factor * (*theOp)(phys_up,phys_down);
+                        complex<double> factorbis;
+                        
+                        //take the hermitian conjugate of the operator if requested
+                        if(conj)
+                           factorbis = factor * (*theOp)(phys_down,phys_up);
+                        else
+                           factorbis = factor * (*theOp)(phys_up,phys_down);
 
                         if(std::abs(factorbis) > 1.0e-15){
 
@@ -477,7 +494,7 @@ void MPSstate::ApplyMPO(MPO * theMPO, MPSstate * Psi0){
          }//mpo left right loop
 
    }//loop over sites
-
+   
 }
 
 /**

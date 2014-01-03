@@ -77,8 +77,8 @@ void AFMPO::fillMPOdimensions(){
 
    MPOdimensions[0] = MPOdimensions[length] = 1;
 
-   for (int site = 0;site < length;site++)
-      MPOdimensions[site+1] = 2;
+   for (int site = 1;site < length;site++)
+      MPOdimensions[site] = 2;
 
 }
 

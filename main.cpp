@@ -39,6 +39,7 @@ int main(int argc,char *argv[]){
       theMPO.sCoupling(cnt,cnt+1,1.0);
 
    theMPO.sField(0.0);
+   TrotterHeisenberg trotter(&theMPO,0.01);
 
    Random RN;
    MPSstate Psi0("debug.mps",&RN);

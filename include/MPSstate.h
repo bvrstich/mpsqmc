@@ -61,9 +61,14 @@ class MPSstate{
       
       //Right-normalize the whole chain, return the norm
       complex<double> RightNormalize();
+
+      //normalize the state, no canonicalization. return the norm
+      complex<double> normalize();
       
       //Calculate the overlap
       complex<double> InnerProduct(MPSstate * OtherState);
+
+      void ChangePhase();
       
       //Multiply with a scalar
       void ScalarMultiplication(const complex<double> factor);

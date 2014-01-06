@@ -46,9 +46,6 @@ class AFQMC{
       //The total desired number of walkers
       int totalNDesiredWalkers;
       
-      //The current number of walkers in total
-      int totalNCurrentWalkers;
-      
       //The imaginary time step size (positive)
       double dtau;
       
@@ -75,7 +72,7 @@ class AFQMC{
       void BubbleSort(double * values, int * order, const int length);
       
       //Write the projected energy, target energy, and fluctuation metric at MC time "step"
-      void write(const int step,const int nwalkers, const double projectedEnergy, const double targetEnergy, const double fluctMetric);
+      void write(const int step,const int nwalkers, const double projectedEnergy, const double targetEnergy);
       
       /****************************
       *** Trial wfn information ***

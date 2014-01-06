@@ -268,6 +268,16 @@ void MPSstate::checkWork3(const int size){
 
 }
 
+complex<double> MPSstate::normalize(){
+
+   complex<double> scal = std::sqrt(this->InnerProduct(this));
+
+   this->ScalarMultiplication(1.0/scal);
+
+   return scal;
+
+}
+
 complex<double> MPSstate::LeftNormalize(){
 
    checkWork1(Dtrunc*Dtrunc);
@@ -282,7 +292,10 @@ complex<double> MPSstate::LeftNormalize(){
          theTensors[cnt+1]->LeftMultiply(work1,work2);
 
    }
-   
+
+   if(std::real(work1[0]) < 0.0)
+      this->ChangePhase();
+  
    return work1[0];
 
 }
@@ -604,5 +617,19 @@ ostream &operator<<(ostream &output,MPSstate &mps){
    }
 
    return output;
+
+}
+
+/**
+ * change the phase of the wavefunction, multiply tensor on site 0 with (-1)
+ * needed for important sampling with constrained path.
+ */
+void MPSstate::ChangePhase(){
+
+   const int site = 0;
+   int dim = VirtualD[site] * VirtualD[site+1] * phys_d;
+   complex<double> alpha(-1.0,0.0);
+   int inc = 1;
+   zscal_(&dim,&alpha,theTensors[site]->gStorage(),&inc);
 
 }

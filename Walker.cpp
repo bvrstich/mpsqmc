@@ -99,7 +99,7 @@ void Walker::update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0){
 
    complex<double> prev_over = overlap;
 
-   theState->LeftNormalize();
+   theState->normalize();
    overlap = theState->InnerProduct(Psi0);
 
    //energy reset and scaling

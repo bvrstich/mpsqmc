@@ -314,8 +314,8 @@ void AFQMC::Walk(const int steps){
    for (int step=1; step<=steps; step++){
 
       //Propagate the walkers of each rank separately --> no MPI in that function
+
       double wsum = PropagateSeparately();
-      cout << wsum << endl;
 /*
       //Form the total sum of the walker weights and calculate the scaling for population control
 #ifdef USE_MPI_IN_MPSQMC
@@ -391,8 +391,7 @@ double AFQMC::PropagateSeparately(){
       if(theTrotter->gIsMagneticField())
          theWalkers[walker]->gState()->ApplyH1(theTrotter);
 
-      theWalkers[walker]->sOverlap(Psi0); //Normalizes and correctly sets the overlap again
-      theWalkers[walker]->update_weight(dtau,HPsi0); 
+      theWalkers[walker]->update_weight(dtau,Psi0,HPsi0); 
       theWalkers[walker]->sVL(VPsi0);
 
       sum += theWalkers[walker]->gWeight();

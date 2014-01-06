@@ -43,7 +43,7 @@ class Walker{
 
       void sVL(MPSstate **VPsi0);
 
-      void update_weight(double dtau,MPSstate *HPsi0);
+      void update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0);
 
       complex<double> gEL() const;
 

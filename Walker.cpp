@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <iostream>
+#include <algorithm>
 
 #include "Walker.h"
 
@@ -91,20 +92,31 @@ void Walker::multWeight(const double factor){
 }
 
 /**
- * update the weight of the walker and set the new local energy. First calculate new overlap!
+ * update the weight of the walker and set the new overlap and local energy.
  * @param dtau timestep
  */
-void Walker::update_weight(double dtau,MPSstate *HPsi0){
+void Walker::update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0){
 
-   complex<double> tmp = EL;
+   complex<double> prev_over = overlap;
+
+   theState->LeftNormalize();
+   overlap = theState->InnerProduct(Psi0);
+
+   //energy reset and scaling
+   complex<double> prev_EL = EL;
 
    EL = theState->InnerProduct(HPsi0)/overlap;
 
-   tmp = 0.5 * ( tmp + EL );
+   prev_EL = 0.5 * ( prev_EL + EL );
 
-   double exponent = -dtau * std::real(tmp);
+   double exponent = -dtau * std::real(prev_EL);
 
    weight *= exp(exponent);
+
+   //complex weight rescaling
+   double theta = std::arg(overlap/prev_over);
+
+   weight *= std::max(0.0,cos(theta));
 
 }
 

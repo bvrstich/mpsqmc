@@ -125,7 +125,7 @@ void Walker::update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0){
  */
 void Walker::sOverlap(MPSstate * Psi0){
 
-   theState->LeftNormalize();
+   theState->normalize();
    overlap = theState->InnerProduct(Psi0);
 
 }

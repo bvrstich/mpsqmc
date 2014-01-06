@@ -327,8 +327,6 @@ void AFQMC::Walk(const int steps){
 #endif
       double scaling = totalNDesiredWalkers / wsum;
 
-      cout << wsum << endl;
-      cout << scaling << endl;
       double ET = log(scaling)/dtau;
 
       //Update the energy history for each walker, return the fluctuation metric and total projected energy --> uses MPI
@@ -464,7 +462,7 @@ double AFQMC::gEP(){
    double projE_num = 0.0;
    double projE_den = 0.0;
 
-   for(int walker = 0;walker < NCurrentWalkersPerRank[MPIrank];walker++){
+   for(int walker = 0;walker < theWalkers.size();walker++){
 
       const double walkerEnergy = std::real(theWalkers[walker]->gEL()); // <Psi_T | H | walk > / <Psi_T | walk >
 

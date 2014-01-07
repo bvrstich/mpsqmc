@@ -71,7 +71,7 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    //now transform the J elements with dtau and the eigenvalues for the propagator to form the transformation V
    for(int k = 0;k < length;++k){
 
-      complex<double> tmp =  std::sqrt( (complex<double>)-2.0 * Jeig[k] * dtau);
+      complex<double> tmp =  std::sqrt( (complex<double>)-Jeig[k] * dtau);
 
       for(int i = 0;i < length;++i)
          V[k*length + i] = tmp * J[k*length + i];
@@ -87,9 +87,14 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    H1Prop = new complex<double> [phys_d*phys_d];
 
    //e^Sz is diagonal in the physical site-basis
-   for(int i = 0;i < phys_d;++i)
-      for(int j = 0;j < phys_d;++j)
-         H1Prop[j*phys_d + i] = exp(-0.5 * dtau * theField * (*Sz)(i,j));
+   for(int i = 0;i < phys_d;++i){
+
+      H1Prop[i*phys_d + i] = exp(-0.5 * dtau * theField * (*Sz)(i,i));
+
+      for(int j = i + 1;j < phys_d;++j)
+         H1Prop[j*phys_d + i] = H1Prop[i*phys_d + j] = complex<double>(0.0,0.0);
+
+   }
 
    Sx_vec = new complex<double> [phys_d*phys_d];
    Sy_vec = new complex<double> [phys_d*phys_d];
@@ -135,8 +140,8 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    V_Op = new AFMPO * [3*length];
 
    for(int r = 0;r < 3;++r)
-      for(int i = 0;i < length;++i)
-         V_Op[r*length + i] = new AFMPO(length,phys_d,r,V + i*length);
+      for(int k = 0;k < length;++k)
+         V_Op[r*length + k] = new AFMPO(length,phys_d,r,V + k*length);
 
 }
 

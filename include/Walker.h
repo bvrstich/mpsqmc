@@ -10,13 +10,13 @@ class Walker{
    public:
    
       //Constructor copying an MPSstate
-      Walker(MPSstate * theState, const double weight);
+      Walker(MPSstate * theState, const double weight,int n_trot);
       
       //Constructor copying an entire Walker
       Walker(Walker * theWalker);
       
       //Constructor creating a random MPSstate, with weight 1, overlap NAN
-      Walker(const int length, const int Dtrunc, const int phys_d, Random * RN);
+      Walker(const int length, const int Dtrunc, const int phys_d, int n_trot,Random * RN);
       
       //Destructor
       ~Walker();
@@ -45,6 +45,8 @@ class Walker{
 
       void update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0);
 
+      int gn_trot() const;
+
       complex<double> gEL() const;
 
       complex<double> gVL(int,int) const;
@@ -53,6 +55,9 @@ class Walker{
    
       //The MPS state
       MPSstate *theState;
+
+      //nr of trotter terms
+      int n_trot;
       
       //The walker overlap with the trial wfn
       complex<double> overlap;

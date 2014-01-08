@@ -30,6 +30,7 @@ AFQMC::AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW
    this->dtau = dtau;
 
    this->theTrotter = new TrotterHeisenberg(theMPO,dtau);
+   n_trot = theTrotter->gn_trot();
 
    this->totalNDesiredWalkers = Nwalkers;
 
@@ -131,7 +132,7 @@ AFQMC::~AFQMC(){
    delete Psi0;
    delete HPsi0;
 
-   for(int k = 0;k < 3*theMPO->gLength();++k)
+   for(int k = 0;k < 3*n_trot;++k)
       delete VPsi0[k];
 
    delete [] VPsi0;
@@ -175,17 +176,15 @@ void AFQMC::SetupTrial(){
    //now Apply the hermitian conjugate of the V's times trialstate
    if(MPIrank==0){
 
-      int length = theMPO->gLength();
-
-      VPsi0 = new MPSstate * [3*length];
+      VPsi0 = new MPSstate * [3*n_trot];
 
       for(int r = 0;r < 3;++r)
-         for(int k = 0;k < length;++k){
+         for(int k = 0;k < n_trot;++k){
 
-         VPsi0[r*length + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-         
-         VPsi0[r*length + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
-         VPsi0[r*length + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+         VPsi0[r*n_trot + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+
+         VPsi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
+         VPsi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
       }
 
@@ -194,9 +193,8 @@ void AFQMC::SetupTrial(){
 #ifdef USE_MPI_IN_MPSQMC
    for(int r = 0;r < 3;++r)
       for(int k = 0;k < length;++k)
-         VPsi0[r*length + k] = BroadcastCopyConstruct(VPsi0[r*length + k]);
+         VPsi0[r*n_trot + k] = BroadcastCopyConstruct(VPsi0[r*length + k]);
 #endif
-
 
 }
 
@@ -253,7 +251,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
    if(copyTrial){
 
-      theWalkers[0] = new Walker(Psi0,1.0);
+      theWalkers[0] = new Walker(Psi0,1.0,n_trot);
 
       if(DW < DT)
          theWalkers[0]->gState()->CompressState(DW);//compress the state to Walker D
@@ -265,7 +263,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
    }
    else{
 
-      theWalkers[0] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), RN);
+      theWalkers[0] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), n_trot,RN);
 
       theWalkers[0]->sOverlap(Psi0);
       theWalkers[0]->sEL(HPsi0);
@@ -279,7 +277,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
          theWalkers[cnt] = new Walker(theWalkers[0]);
       else{
 
-         theWalkers[cnt] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), RN);
+         theWalkers[cnt] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), n_trot,RN);
          
          theWalkers[cnt]->sOverlap(Psi0);
          theWalkers[cnt]->sEL(HPsi0);
@@ -314,7 +312,7 @@ void AFQMC::Walk(const int steps){
 
       //Propagate the walkers of each rank separately --> no MPI in that function
       double wsum = PropagateSeparately();
-
+/*
       //Form the total sum of the walker weights and calculate the scaling for population control
 #ifdef USE_MPI_IN_MPSQMC
       MPI::COMM_WORLD.Barrier();
@@ -355,7 +353,7 @@ void AFQMC::Walk(const int steps){
 #ifdef USE_MPI_IN_MPSQMC
       PopulationBalancing();
 #endif
-
+*/
    }
 
 }
@@ -368,7 +366,8 @@ double AFQMC::PropagateSeparately(){
    double sum = 0.0;
 
 #pragma omp parallel for reduction(+: sum)
-   for(int walker=0; walker < theWalkers.size(); walker++){
+   //for(int walker=0; walker < theWalkers.size(); walker++){
+      int walker = 0;
 
       //Propagate with single site terms --> exp (dtau * h * SiZ * 0.5)  for Hterm = -h SiZ, if a field is present
       if(theTrotter->gIsMagneticField())
@@ -376,7 +375,7 @@ double AFQMC::PropagateSeparately(){
 
       //now loop over the auxiliary fields:
       for(int r = 0;r < 3;++r)
-         for(int k = 0;k < theMPO->gLength();++k){
+         for(int k = 0;k < n_trot;++k){
 
             double x = RN->normal();
             complex<double> shift = theWalkers[walker]->gVL(k,r);
@@ -394,7 +393,7 @@ double AFQMC::PropagateSeparately(){
 
       sum += theWalkers[walker]->gWeight();
 
-   }
+   //}
 
    return sum;
 }
@@ -403,6 +402,8 @@ void AFQMC::SeparatePopulationControl(const double scaling){
 
    double minw = 1.0;
    double maxw = 1.0;
+
+   double sum = 0.0;
 
    for(int walker = 0;walker < theWalkers.size();walker++){
 
@@ -445,7 +446,11 @@ void AFQMC::SeparatePopulationControl(const double scaling){
 
       }
 
+      sum += weight;
+
    }
+
+   cout << "WEIGHT AFTER SCALING\t" << sum << endl;
 
    cout << "The min. encountered weight on rank " << MPIrank << " is " << minw << " ." << endl;
    cout << "The max. encountered weight on rank " << MPIrank << " is " << maxw << " ." << endl;

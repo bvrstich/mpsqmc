@@ -34,6 +34,8 @@ int main(int argc,char *argv[]){
 
    set2DHeis(L,1.0,0.0,theMPO);
 
+   TrotterHeisenberg theTrotter(&theMPO,0.01);
+
    Random RN;
 
    MPSstate A(L*L,DT,d,&RN);
@@ -46,33 +48,29 @@ int main(int argc,char *argv[]){
 
    cout << tmp.InnerProduct(&B) << endl;
 
-   TrotterHeisenberg theTrotter(&theMPO,0.01);
-
-   complex<double> ward(0.0,0.0);
+   complex<double> val(0.0,0.0);
 
    for(int r = 0;r < 3;++r)
-      for(int k = 0;k < L*L;++k){
+      for(int k = 0;k < theTrotter.gn_trot();++k){
 
          tmp.ApplyMPO(false,theTrotter.gV_Op(k,r),&A);
          tmp2.ApplyMPO(false,theTrotter.gV_Op(k,r),&tmp);
 
-         ward += tmp2.InnerProduct(&B);
+         val += tmp2.InnerProduct(&B);
 
       }
 
-   cout << 0.5 * ward/(-0.01) << endl;
-
+   cout << -0.5 * val / 0.01 << endl;
 
 /*
-   Random RN;
-   MPSstate Psi0("debug.mps",&RN);
+   MPSstate Psi0("debug_2D.mps",&RN);
 
    int Nwalkers = 1000;
    double dtau = 0.01;
-   int nSteps = 10;
+   int nSteps = 100000;
 
    AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
-   thePopulation.Walk(nSteps);
+   thePopulation.Walk(1);
 */
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

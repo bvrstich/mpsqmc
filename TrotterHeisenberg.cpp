@@ -66,15 +66,32 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    delete [] work;
    delete [] rwork;
 
-   V = new complex<double> [length*length];
+   n_trot = 0;
+
+   for(int i = 0;i < length;++i){
+
+      if(fabs(Jeig[i]) > 1.0e-14)
+         n_trot++;
+
+   }
+
+   V = new complex<double> [n_trot*length];
 
    //now transform the J elements with dtau and the eigenvalues for the propagator to form the transformation V
-   for(int k = 0;k < length;++k){
+   int k = 0;
 
-      complex<double> tmp =  std::sqrt( (complex<double>)-Jeig[k] * dtau);
+   for(int i = 0;i < length;++i){
 
-      for(int i = 0;i < length;++i)
-         V[k*length + i] = tmp * J[k*length + i];
+      if(fabs(Jeig[i]) > 1.0e-14){
+
+         complex<double> tmp =  std::sqrt( (complex<double>)-Jeig[i] * dtau);
+
+         for(int j = 0;j < length;++j)
+            V[k*length + j] = tmp * J[i*length + j];
+
+         ++k;
+
+      }
 
    }
 
@@ -132,16 +149,16 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
 #endif
 
    AFProp = new complex<double> * [myNOMPthreads];
-   
+
    for(int thr = 0;thr < myNOMPthreads;++thr)
       AFProp[thr] = new complex<double> [length * phys_d * phys_d];
 
    //finally construct the auxiliary field operators as MPO's:
-   V_Op = new AFMPO * [3*length];
+   V_Op = new AFMPO * [3*n_trot];
 
    for(int r = 0;r < 3;++r)
-      for(int k = 0;k < length;++k)
-         V_Op[r*length + k] = new AFMPO(length,phys_d,r,V + k*length);
+      for(int k = 0;k < n_trot;++k)
+         V_Op[r*n_trot + k] = new AFMPO(length,phys_d,r,V + k*length);
 
 }
 
@@ -174,8 +191,8 @@ TrotterHeisenberg::~TrotterHeisenberg(){
    delete [] AFProp;
 
    for(int r = 0;r < 3;++r)
-      for(int i = 0;i < length;++i)
-         delete V_Op[r*length + i];
+      for(int i = 0;i < n_trot;++i)
+         delete V_Op[r*n_trot + i];
 
    delete [] V_Op;
 
@@ -207,7 +224,7 @@ complex<double> TrotterHeisenberg::gJ(const int k, const int i) const {
  */
 complex<double> TrotterHeisenberg::gV(const int k, const int i) const {
 
-   return V[ k*length + i ]; 
+   return V[ k*n_trot + i ]; 
 
 }
 
@@ -265,7 +282,7 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
                AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
                for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
-                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
+                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(  x * V[k*n_trot + site] * eig[l] ) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
 
             }
 
@@ -281,8 +298,8 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
 
                AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
-               for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
-                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(x * V[k*length + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
+               for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sy--> l
+                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp( x * V[k*n_trot + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
 
             }
 
@@ -295,7 +312,7 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
       for(int site = 0;site < length;++site)
          for(int i = 0;i < phys_d;++i){
 
-            AFProp[myID][site*phys_d*phys_d + i*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,i) );
+            AFProp[myID][site*phys_d*phys_d + i*phys_d + i] = exp(x * V[k*n_trot + site] * (*Sz)(i,i) );
 
             for(int j = i + 1;j < phys_d;++j)
                AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = AFProp[myID][site*phys_d*phys_d + i*phys_d + j] = complex<double>(0.0,0.0);
@@ -311,6 +328,15 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
  */
 AFMPO *TrotterHeisenberg::gV_Op(int k,int r){
 
-   return V_Op[r*length + k];
+   return V_Op[r*n_trot + k];
+
+}
+
+/**
+ * @return the number of trotter terms
+ */
+int TrotterHeisenberg::gn_trot() const {
+
+   return n_trot;
 
 }

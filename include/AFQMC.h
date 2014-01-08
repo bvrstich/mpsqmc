@@ -33,6 +33,9 @@ class AFQMC{
       
       //The Trotter decomposition of the MPO
       TrotterHeisenberg * theTrotter;
+
+      //number of trotter terms
+      int n_trot;
       
       //The random number generator
       Random * RN;

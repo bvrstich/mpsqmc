@@ -564,6 +564,12 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
    //fill the allocated memory with the correct values
    theTrotter->fillAFProp(myID,k,r,x);
 
+   cout << endl;
+   cout << endl;
+   cout << "(" << k << "," << r << ")\t|\t" << x << endl;
+   cout << endl;
+   cout << endl;
+
    for(int site = 0;site < length;site++){
 
       int sizeBlock = VirtualD[site] * VirtualD[site+1];
@@ -577,6 +583,8 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
          for (int phys_down=0; phys_down<phys_d; phys_down++){
 
             complex<double> OperatorValue = theTrotter->gAFProp(myID,site,phys_up,phys_down);
+
+            cout << "(" << site << ")\t" << phys_up << "\t" << phys_down << "\t|\t" << OperatorValue << endl;
 
             if(std::abs(OperatorValue) > 1.0e-15){
 

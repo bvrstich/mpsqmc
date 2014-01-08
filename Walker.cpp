@@ -7,12 +7,13 @@
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 16, 2013 */
 
-Walker::Walker(MPSstate * theState, const double weight){
+Walker::Walker(MPSstate * theState, const double weight,int n_trot){
 
    this->theState      = new MPSstate(theState);
    this->weight        = weight;
+   this->n_trot        = n_trot;
 
-   VL = new complex<double> [3*theState->gLength()];
+   VL = new complex<double> [3*n_trot];
 
 }
 
@@ -21,23 +22,25 @@ Walker::Walker(Walker * theWalker){
    this->theState      = new MPSstate(theWalker->gState());
    this->weight        = theWalker->gWeight();
    this->overlap       = theWalker->gOverlap();
+   this->n_trot        = theWalker->gn_trot();
 
    this->EL = theWalker->gEL();
 
-   VL = new complex<double> [3*theState->gLength()];
+   VL = new complex<double> [3*n_trot];
 
    for(int r = 0;r < 3;++r)
-      for(int k = 0;k < theState->gLength();++k)
-         VL[r*theState->gLength() + k] = theWalker->gVL(k,r);
+      for(int k = 0;k < n_trot;++k)
+         VL[r*n_trot + k] = theWalker->gVL(k,r);
 
 }
 
-Walker::Walker(const int length, const int Dtrunc, const int phys_d, Random * RN){
+Walker::Walker(const int length, const int Dtrunc, const int phys_d, int n_trot,Random * RN){
 
    this->theState      = new MPSstate(length, Dtrunc, phys_d, RN);
    this->weight        = 1.0;
+   this->n_trot        = n_trot;
 
-   VL = new complex<double> [3*length];
+   VL = new complex<double> [3*n_trot];
 
 }
 
@@ -46,6 +49,15 @@ Walker::~Walker(){
    delete theState;
 
    delete [] VL;
+
+}
+
+/** 
+ * @return the number of trotter terms
+ */
+int Walker::gn_trot() const {
+
+   return n_trot;
 
 }
 
@@ -69,7 +81,7 @@ complex<double> Walker::gEL() const{
 
 complex<double> Walker::gVL(int k,int r) const{
    
-   return VL[r*theState->gLength() + k]; 
+   return VL[r*n_trot + k]; 
    
 }
 
@@ -145,7 +157,7 @@ void Walker::sEL(MPSstate * HPsi0){
 void Walker::sVL(MPSstate ** VPsi0){
 
    for(int r = 0;r < 3;++r)
-      for(int k = 0;k < theState->gLength();++k)
-         VL[r*theState->gLength() + k] = theState->InnerProduct(VPsi0[r*theState->gLength() + k])/overlap;
+      for(int k = 0;k < n_trot;++k)
+         VL[r*n_trot + k] = theState->InnerProduct(VPsi0[r*n_trot + k])/overlap;
 
 }

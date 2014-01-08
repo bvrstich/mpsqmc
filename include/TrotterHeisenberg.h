@@ -42,6 +42,8 @@ class TrotterHeisenberg{
       void fillAFProp(int myID,int k,int r,complex<double> x);
 
       AFMPO *gV_Op(int k,int r);
+
+      int gn_trot() const;
       
    private:
    
@@ -62,6 +64,9 @@ class TrotterHeisenberg{
       
       //!the transformation matrix
       complex<double> *V;
+
+      //!the number of non-zero eigenvalues of the coupling matrix: equals the number of trotter product terms
+      int n_trot;
 
       AFMPO **V_Op;
       

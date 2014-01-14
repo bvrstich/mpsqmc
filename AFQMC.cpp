@@ -401,15 +401,14 @@ double AFQMC::PropagateSeparately(){
          theWalkers[walker]->gState()->ApplyH1(theTrotter);
 
       //now loop over the auxiliary fields:
-      for(int k = 0;k < n_trot;++k)
-         for(int r = 0;r < 3;++r){
+      for(int k = 0;k < n_trot;++k){
 
-            double x = RN->normal();
-            
-            complex<double> shift = theWalkers[walker]->gVL(k,r);
-            theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x + shift,theTrotter);
+         double x = RN->normal();
 
-         }
+         //complex<double> shift = theWalkers[walker]->gVL(k,r);
+         theWalkers[walker]->gState()->ApplyAF(k,(complex<double>)x/* + shift*/,theTrotter);
+
+      }
 
       //Propagate with single site terms --> exp (dtau * h * SiZ * 0.5)  for Hterm = -h SiZ
       if(theTrotter->gIsMagneticField())
@@ -427,7 +426,7 @@ double AFQMC::PropagateSeparately(){
 
       theWalkers[walker]->multWeight(scale);
 */
-      theWalkers[walker]->sVL(VPsi0);
+      //theWalkers[walker]->sVL(VPsi0);
 
       sum += theWalkers[walker]->gWeight();
 
@@ -520,8 +519,8 @@ complex<double> AFQMC::gEP(){
       const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
-      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;// * theWalkers[walker]->gOverlap();
-      projE_den += theWalkers[walker]->gWeight();// * theWalkers[walker]->gOverlap();
+      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy * theWalkers[walker]->gOverlap();
+      projE_den += theWalkers[walker]->gWeight() * theWalkers[walker]->gOverlap();
 
    }
 

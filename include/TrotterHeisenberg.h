@@ -6,6 +6,7 @@
 #include "OpSx.h"
 #include "OpSy.h"
 #include "AFMPO.h"
+#include "Random.h"
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 14, 2013 */
 
@@ -40,6 +41,8 @@ class TrotterHeisenberg{
       complex<double> gAFProp(int myID,int site,const int i, const int j) const;
 
       void fillAFProp(int myID,int k,int r,complex<double> x);
+
+      void fillAFProp(int myID,int k,complex<double> x,Random *);
 
       AFMPO *gV_Op(int k,int r);
 
@@ -88,6 +91,9 @@ class TrotterHeisenberg{
 
       //!the auxiliary-field propagators
       complex<double> **AFProp;
+
+      //!random direction operator
+      complex<double> **Sv;
       
       double *Jeig;
       

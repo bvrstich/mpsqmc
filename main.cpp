@@ -33,6 +33,7 @@ int main(int argc,char *argv[]){
    HeisenbergMPO theMPO(L*L,d);
 
    set2DHeis(L,1.0,0.0,theMPO);
+   TrotterHeisenberg theTrotter(&theMPO,0.01);
 
    Random RN;
 

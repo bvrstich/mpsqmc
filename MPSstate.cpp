@@ -293,9 +293,6 @@ complex<double> MPSstate::LeftNormalize(){
 
    }
 
-   if(std::real(work1[0]) < 0.0)
-      this->ChangePhase();
-  
    return work1[0];
 
 }
@@ -456,6 +453,7 @@ void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
 
                complex<double> factor = theMPO->gPrefactor(site,MPOleft,MPOright);
 
+               //take the hermitian conjugate of the operator if requested
                if(conj)
                   factor = std::conj(factor);
 
@@ -480,9 +478,8 @@ void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
 
                         complex<double> factorbis;
                         
-                        //take the hermitian conjugate of the operator if requested
                         if(conj)
-                           factorbis = factor * (*theOp)(phys_down,phys_up);
+                           factorbis = factor * std::conj((*theOp)(phys_down,phys_up));
                         else
                            factorbis = factor * (*theOp)(phys_up,phys_down);
 
@@ -564,12 +561,6 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
    //fill the allocated memory with the correct values
    theTrotter->fillAFProp(myID,k,r,x);
 
-   cout << endl;
-   cout << endl;
-   cout << "(" << k << "," << r << ")\t|\t" << x << endl;
-   cout << endl;
-   cout << endl;
-
    for(int site = 0;site < length;site++){
 
       int sizeBlock = VirtualD[site] * VirtualD[site+1];
@@ -583,8 +574,6 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
          for (int phys_down=0; phys_down<phys_d; phys_down++){
 
             complex<double> OperatorValue = theTrotter->gAFProp(myID,site,phys_up,phys_down);
-
-            cout << "(" << site << ")\t" << phys_up << "\t" << phys_down << "\t|\t" << OperatorValue << endl;
 
             if(std::abs(OperatorValue) > 1.0e-15){
 
@@ -630,7 +619,7 @@ ostream &operator<<(ostream &output,MPSstate &mps){
 
 /**
  * change the phase of the wavefunction, multiply tensor on site 0 with (-1)
- * needed for important sampling with constrained path.
+ * needed for important sampling with constrained phase
  */
 void MPSstate::ChangePhase(){
 

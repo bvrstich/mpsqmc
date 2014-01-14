@@ -28,6 +28,7 @@ AFQMC::AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW
    this->DT = Psi0_in->gDtrunc();
    this->DW = DW;
    this->dtau = dtau;
+   this->phys_d = theMPO->gPhys_d();
 
    this->theTrotter = new TrotterHeisenberg(theMPO,dtau);
    n_trot = theTrotter->gn_trot();
@@ -132,10 +133,15 @@ AFQMC::~AFQMC(){
    delete Psi0;
    delete HPsi0;
 
-   for(int k = 0;k < 3*n_trot;++k)
+   for(int k = 0;k < 3*n_trot;++k){
+
       delete VPsi0[k];
+      delete V2Psi0[k];
+
+   }
 
    delete [] VPsi0;
+   delete [] V2Psi0;
 
    //AFQMC::SetupWalkers
    for (int cnt = 0;cnt < theWalkers.size(); cnt++)
@@ -177,6 +183,7 @@ void AFQMC::SetupTrial(){
    if(MPIrank==0){
 
       VPsi0 = new MPSstate * [3*n_trot];
+      V2Psi0 = new MPSstate * [3*n_trot];
 
       for(int r = 0;r < 3;++r)
          for(int k = 0;k < n_trot;++k){
@@ -186,6 +193,11 @@ void AFQMC::SetupTrial(){
          VPsi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
          VPsi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
+         V2Psi0[r*n_trot + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+
+         V2Psi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , VPsi0[r*n_trot + k]);
+         V2Psi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+
       }
 
    }
@@ -193,7 +205,7 @@ void AFQMC::SetupTrial(){
 #ifdef USE_MPI_IN_MPSQMC
    for(int r = 0;r < 3;++r)
       for(int k = 0;k < length;++k)
-         VPsi0[r*n_trot + k] = BroadcastCopyConstruct(VPsi0[r*length + k]);
+         VPsi0[r*n_trot + k] = BroadcastCopyConstruct(VPsi0[r*n_trot + k]);
 #endif
 
 }
@@ -291,7 +303,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
 void AFQMC::Walk(const int steps){
 
-   double EP = gEP();
+   complex<double> EP = gEP();
 
    if (MPIrank==0){
 
@@ -312,7 +324,7 @@ void AFQMC::Walk(const int steps){
 
       //Propagate the walkers of each rank separately --> no MPI in that function
       double wsum = PropagateSeparately();
-/*
+
       //Form the total sum of the walker weights and calculate the scaling for population control
 #ifdef USE_MPI_IN_MPSQMC
       MPI::COMM_WORLD.Barrier();
@@ -339,12 +351,28 @@ void AFQMC::Walk(const int steps){
          cout << "         E_T = " << ET << endl;
          cout << "---------------------------------------------------------" << endl;
 
-         write(step,theWalkers.size(),EP, ET);
+         write(step,theWalkers.size(),std::real(EP), ET);
 
       }
 
       //Based on scaling, first control the population on each rank separately, and then balance the population over the ranks (uses MPI)
       SeparatePopulationControl(scaling);
+
+      double min_en = 0.0;
+      double min_ov = 1.0;
+
+      for(int i = 0;i < theWalkers.size();++i){
+
+         if(min_en > std::real(theWalkers[i]->gEL()))
+            min_en = std::real(theWalkers[i]->gEL());
+
+         if(min_ov > std::abs(theWalkers[i]->gOverlap()))
+            min_ov = std::abs(theWalkers[i]->gOverlap());
+
+      }
+
+      cout << "Minimal Energy:\t" << min_en << endl;
+      cout << "Minimal Overlap:\t" << min_ov << endl;
 
 #ifdef USE_MPI_IN_MPSQMC
       MPI::COMM_WORLD.Barrier();
@@ -353,7 +381,7 @@ void AFQMC::Walk(const int steps){
 #ifdef USE_MPI_IN_MPSQMC
       PopulationBalancing();
 #endif
-*/
+
    }
 
 }
@@ -366,21 +394,20 @@ double AFQMC::PropagateSeparately(){
    double sum = 0.0;
 
 #pragma omp parallel for reduction(+: sum)
-   //for(int walker=0; walker < theWalkers.size(); walker++){
-      int walker = 0;
+   for(int walker=0; walker < theWalkers.size(); walker++){
 
       //Propagate with single site terms --> exp (dtau * h * SiZ * 0.5)  for Hterm = -h SiZ, if a field is present
       if(theTrotter->gIsMagneticField())
          theWalkers[walker]->gState()->ApplyH1(theTrotter);
 
       //now loop over the auxiliary fields:
-      for(int r = 0;r < 3;++r)
-         for(int k = 0;k < n_trot;++k){
+      for(int k = 0;k < n_trot;++k)
+         for(int r = 0;r < 3;++r){
 
             double x = RN->normal();
+            
             complex<double> shift = theWalkers[walker]->gVL(k,r);
-
-            theWalkers[walker]->gState()->ApplyAF(k,r,x + shift,theTrotter);
+            theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x + shift,theTrotter);
 
          }
 
@@ -388,12 +415,23 @@ double AFQMC::PropagateSeparately(){
       if(theTrotter->gIsMagneticField())
          theWalkers[walker]->gState()->ApplyH1(theTrotter);
 
-      theWalkers[walker]->update_weight(dtau,Psi0,HPsi0); 
+      theWalkers[walker]->sOverlap(Psi0);
+
+      //complex<double> prev_EL = theWalkers[walker]->gEL();
+
+      theWalkers[walker]->sEL(HPsi0);
+
+      //complex<double> EL = theWalkers[walker]->gEL();
+/*
+      double scale = exp(-0.5 * dtau * std::real(EL + prev_EL));
+
+      theWalkers[walker]->multWeight(scale);
+*/
       theWalkers[walker]->sVL(VPsi0);
 
       sum += theWalkers[walker]->gWeight();
 
-   //}
+   }
 
    return sum;
 }
@@ -416,20 +454,28 @@ void AFQMC::SeparatePopulationControl(const double scaling){
 
       if(weight > maxw)
          maxw = weight;
-
+/*
       if (weight < 0.25){ //Energy doesn't change statistically
 
-         cout << "Walker with weight " << weight << " will be deleted." << endl;
+         int nCopies = (int) ( weight + RN->rand());
 
-         delete theWalkers[walker];
+         if(nCopies == 0){
 
-         theWalkers.erase(theWalkers.begin() + walker);
+            cout << "Walker with weight " << weight << " will be deleted." << endl;
+
+            delete theWalkers[walker];
+
+            theWalkers.erase(theWalkers.begin() + walker);
+
+         }
+         else
+            theWalkers[walker]->sWeight(1.0);
 
       }
 
-      if(weight > 1.5){ //Energy doesn't change
+      if(weight > 1.5){ //statically energy doesn't change
 
-         int nCopies = weight + 0.5;
+         int nCopies =(int) ( weight + RN->rand());
          double new_weight = weight / (double) nCopies;
 
          theWalkers[walker]->sWeight(new_weight);
@@ -445,12 +491,14 @@ void AFQMC::SeparatePopulationControl(const double scaling){
          }
 
       }
-
+*/
       sum += weight;
 
    }
 
-   cout << "WEIGHT AFTER SCALING\t" << sum << endl;
+   cout << endl;
+   cout << "total weight:\t" << sum << endl;
+   cout << endl;
 
    cout << "The min. encountered weight on rank " << MPIrank << " is " << minw << " ." << endl;
    cout << "The max. encountered weight on rank " << MPIrank << " is " << maxw << " ." << endl;
@@ -462,22 +510,22 @@ void AFQMC::SeparatePopulationControl(const double scaling){
 
 }
 
-double AFQMC::gEP(){
+complex<double> AFQMC::gEP(){
 
-   double projE_num = 0.0;
-   double projE_den = 0.0;
+   complex<double> projE_num = 0.0;
+   complex<double> projE_den = 0.0;
 
    for(int walker = 0;walker < theWalkers.size();walker++){
 
-      const double walkerEnergy = std::real(theWalkers[walker]->gEL()); // <Psi_T | H | walk > / <Psi_T | walk >
+      const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
-      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;
-      projE_den += theWalkers[walker]->gWeight();
+      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;// * theWalkers[walker]->gOverlap();
+      projE_den += theWalkers[walker]->gWeight();// * theWalkers[walker]->gOverlap();
 
    }
 
-   double EP = 0.0;
+   complex<double> EP = 0.0;
 
 #ifdef USE_MPI_IN_MPSQMC
    //For the projected energy

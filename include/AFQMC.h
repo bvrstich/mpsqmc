@@ -21,7 +21,7 @@ class AFQMC{
       
       //Let the walkers propagate for steps steps
       void Walk(const int steps);
-      
+
    private:
    
       /******************************
@@ -39,6 +39,9 @@ class AFQMC{
       
       //The random number generator
       Random * RN;
+
+      //physical dimension of the sites
+      int phys_d;
       
       //The MPS truncation dimension of the trial wavefunction
       int DT;
@@ -69,7 +72,7 @@ class AFQMC{
       void PopulationBalancing();
       
       //Calculate the single walker projected energies, update the energy history, calculate the fluctuation metric, and the total projected energy
-      double gEP();
+      complex<double> gEP();
       
       //BubbleSort algorithm. Modifies order so that for all index: values[ order[index] ] >= values[ order[index+1] ].
       void BubbleSort(double * values, int * order, const int length);
@@ -89,6 +92,9 @@ class AFQMC{
       
       //Auxiliary field terms (hermitian conjugate!!) times trial wfn. 
       MPSstate ** VPsi0;
+
+      //Auxiliary field terms (hermitian conjugate!!) times trial wfn. 
+      MPSstate ** V2Psi0;
       
       //Setup the trial wfn
       void SetupTrial();

@@ -43,7 +43,7 @@ class Walker{
 
       void sVL(MPSstate **VPsi0);
 
-      void update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0);
+      void update_weight(MPSstate *Psi0,complex<double> x,complex<double> shift);
 
       int gn_trot() const;
 

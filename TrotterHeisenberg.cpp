@@ -4,6 +4,7 @@
 #include "omp.h"
 
 #include "TrotterHeisenberg.h"
+#include "Random.h"
 #include "OpSz.h"
 #include "OpSx.h"
 #include "OpSy.h"

@@ -107,28 +107,25 @@ void Walker::multWeight(const double factor){
  * update the weight of the walker and set the new overlap and local energy.
  * @param dtau timestep
  */
-void Walker::update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0){
+void Walker::update_weight(MPSstate *Psi0,complex<double> x,complex<double> shift){
 
-   complex<double> prev_over = overlap;
+   complex<double> prev_overlap = overlap;
 
    theState->normalize();
-   overlap = theState->InnerProduct(Psi0);
+   complex<double> val = theState->InnerProduct(Psi0);
 
-   //energy reset and scaling
-   complex<double> prev_EL = EL;
+   if (std::real(val) < 0.0){
 
-   EL = theState->InnerProduct(HPsi0)/overlap;
+      theState->ChangePhase();
+      val *= -1;
 
-   prev_EL = 0.5 * ( prev_EL + EL );
+   }
 
-   double exponent = -dtau * std::real(prev_EL);
+   this->overlap = val;
 
-   weight *= exp(exponent);
+   complex<double> scal = overlap/prev_overlap * exp(x*shift - 0.5 * shift*shift);
 
-   //complex weight rescaling
-   double theta = std::arg(overlap/prev_over);
-
-   weight *= std::max(0.0,cos(theta));
+   weight *= std::abs(scal);
 
 }
 
@@ -138,7 +135,16 @@ void Walker::update_weight(double dtau,MPSstate *Psi0,MPSstate *HPsi0){
 void Walker::sOverlap(MPSstate * Psi0){
 
    theState->normalize();
-   overlap = theState->InnerProduct(Psi0);
+   complex<double> val = theState->InnerProduct(Psi0);
+
+   if (std::real(val) < 0.0){
+
+      theState->ChangePhase();
+      val *= -1;
+
+   }
+
+   this->overlap = val;
 
 }
 

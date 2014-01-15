@@ -196,6 +196,12 @@ MPStensor * MPSstate::gMPStensor(const int site){
 
 }
 
+MPStensor &MPSstate::operator[](int site){
+
+   return *theTensors[site];
+}
+
+
 Random * MPSstate::gRN(){
    
    return RN; 
@@ -316,16 +322,120 @@ complex<double> MPSstate::RightNormalize(){
 
 }
 
+complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
+
+   int DO = theMPO->gDtrunc();
+   int Dtrunc_other = OtherState->gDtrunc();
+  
+   int theworksize = Dtrunc * Dtrunc_other * DO;
+
+   checkWork1(theworksize);
+   checkWork2(theworksize*phys_d);
+   checkWork3(theworksize*phys_d);
+  
+   char notrans = 'N';
+   char herm = 'C';
+   int inc = 1;
+
+   int dimRthis = this->gDimAtBound(1);
+   int dimRother = OtherState->gDimAtBound(1);
+   int dimRmpo = theMPO->dimR(0);
+
+   for(int i = 0;i < Dtrunc;++i)
+      for(int o = 0;o < DO;++o)
+         for(int s = 0;s < phys_d;++s)
+            work2[s*DO*Dtrunc + o*Dtrunc + i] = complex<double>(0.0,0.0);
+
+   int sizeBlock = dimRthis;
+
+   for(int o = 0;o < dimRmpo;++o)
+      for(int s = 0;s < phys_d;++s)
+         for(int s_ = 0;s_ < phys_d;++s_){
+
+            complex<double> factor =  (*theMPO)(0,0,s_,s,o);
+
+            if(std::abs(factor) > 1.0e-15)
+               zaxpy_(&sizeBlock,&factor, theTensors[0]->gStorage(s_), &inc, work2 + s*dimRmpo*dimRthis + o*dimRthis, &inc);
+
+         }
+/*
+   for(int o = 0;o < dimRmpo;++o)
+      for(int i = 0;i < dimR;++i)
+         for(int j = 0;j < dimR;++j){
+
+            tmp[o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
+
+            for(int s = 0;s < d;++s)
+               tmp[o*DT*DT + j*DT + i] += tmp2[i*DO*d + o*d + s] * std::conj(Psi0[0](s,0,j));
+
+         }
+
+   for(int site = 1;site < L*L;++site){
+
+      int dimR = Psi0.gDimAtBound(site + 1);
+      int dimL = Psi0.gDimAtBound(site);
+
+      int dimLmpo = theMPO.dimL(site);
+      int dimRmpo = theMPO.dimR(site);
+
+      //top
+      for(int i = 0;i < dimR;++i)
+         for(int j = 0;j < dimL;++j)
+            for(int o = 0;o < dimLmpo;++o)
+               for(int s = 0;s < d;++s){
+
+                  tmp1[s*DO*DT*DT + o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
+
+                  for(int k = 0;k < dimL;++k)
+                     tmp1[s*DO*DT*DT + o*DT*DT + j*DT + i] += tmp[o*DT*DT + j*DT + k] * Psi0[site](s,k,i);
+
+               }
+
+      //operator
+      for(int i = 0;i < dimR;++i)
+         for(int j = 0;j < dimL;++j)
+            for(int o = 0;o < dimRmpo;++o)
+               for(int s = 0;s < d;++s){
+
+                  tmp2[s*DO*DT*DT + o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
+
+                  for(int p = 0;p < dimLmpo;++p)
+                     for(int s_ = 0;s_ < d;++s_)
+                        tmp2[s*DO*DT*DT + o*DT*DT + j*DT + i] += tmp1[s_*DO*DT*DT + p*DT*DT + j*DT + i] * theMPO(site,p,s_,s,o);
+
+               }
+
+      //bottom
+      for(int i = 0;i < dimR;++i)
+         for(int j = 0;j < dimR;++j)
+            for(int o = 0;o < dimRmpo;++o){
+
+               tmp[o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
+
+               for(int s = 0;s < d;++s)
+                  for(int k = 0;k < dimL;++k)
+                     tmp[o*DT*DT + j*DT + i] += tmp2[s*DO*DT*DT + o*DT*DT + k*DT + i] * std::conj(Psi0[site](s,k,j));
+
+               }
+
+   }
+
+   cout << tmp[0] << endl;
+*/
+   return work1[0];
+
+}
+
 complex<double> MPSstate::InnerProduct(MPSstate * OtherState){
 
    if((phys_d != OtherState->gPhys_d()) || (length != OtherState->gLength()))
       return 0.0;
-   
+
    int theworksize = Dtrunc * OtherState->gDtrunc();
    checkWork1(theworksize);
    checkWork2(theworksize);
    checkWork3(theworksize);
-   
+
    work1[0] = 1;
 
    char notrans = 'N';
@@ -335,29 +445,29 @@ complex<double> MPSstate::InnerProduct(MPSstate * OtherState){
    complex<double> set(0.0,0.0);
 
    for(int cnt = 0;cnt < length;cnt++){
-   
+
       int dimLthis = VirtualD[cnt];
       int dimRthis = VirtualD[cnt+1];
 
       int dimLother = OtherState->gDimAtBound(cnt);
       int dimRother = OtherState->gDimAtBound(cnt+1);
-      
+
       for (int cnt2=0; cnt2<dimRthis*dimRother; cnt2++)
          work2[cnt2] = complex<double>(0.0,0.0);
-      
+
       for (int d_val=0;d_val < phys_d;d_val++){
 
          zgemm_(&notrans, &notrans, &dimLother, &dimRthis, &dimLthis, &one, work1, &dimLother, theTensors[cnt]->gStorage(d_val), &dimLthis, &set, work3, &dimLother);
          zgemm_(&herm, &notrans, &dimRother, &dimRthis, &dimLother, &one, OtherState->gMPStensor(cnt)->gStorage(d_val), &dimLother, work3, &dimLother, &one, work2, &dimRother);
 
       }
-      
+
       complex<double> * swap = work1;
       work1 = work2;
       work2 = swap;
-      
+
    }
-   
+
    return work1[0];
 
 }
@@ -366,7 +476,7 @@ complex<double> MPSstate::InnerProduct(MPSstate * OtherState){
 void MPSstate::ScalarMultiplication(const complex<double> factor){
 
    complex<double> site_fact = pow(factor,complex<double>(1.0/length,0.0));
-   
+
    for (int site=0; site<length; site++){
 
       int dim = VirtualD[site] * VirtualD[site+1] * phys_d;
@@ -389,7 +499,7 @@ void MPSstate::CompressState(const int truncD){
       the2siteObject->Compose(theTensors[cnt],theTensors[cnt+1]);
       VirtualD[cnt+1] = the2siteObject->Decompose(theTensors[cnt], theTensors[cnt+1], truncD, true, true);
    }
-   
+
    for (int cnt=length-2; cnt>=0; cnt--){
       the2siteObject->Compose(theTensors[cnt],theTensors[cnt+1]);
       VirtualD[cnt+1] = the2siteObject->Decompose(theTensors[cnt], theTensors[cnt+1], truncD, false, true);
@@ -414,7 +524,7 @@ void MPSstate::printVdim() const {
  * @param conj if true use the hermitian conjugate of the MPO
  */
 void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
- 
+
    //Readjust the dimensions
    for(int cnt=1; cnt<length; cnt++)
       VirtualD[cnt] = theMPO->dimL(cnt) * Psi0->gDimAtBound(cnt);
@@ -435,7 +545,7 @@ void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
    for (int cnt=0; cnt<=length; cnt++)
       if (VirtualD[cnt] > Dtrunc)
          Dtrunc = VirtualD[cnt]; 
-  
+
    for (int site=0; site<length; site++){
 
       const int dimLsmall = Psi0->gDimAtBound(site);
@@ -469,15 +579,14 @@ void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
                      for (int row=0; row<dimLsmall; row++)
                         for (int col=0; col<dimRsmall; col++)
                            target[ (MPOleft * dimLsmall + row) + (dimLsmall * dimLmpo) * (MPOright * dimRsmall + col) ] = factor * source[ row + dimLsmall * col ];
-                        
-                     
+
                   }
                   else{
 
                      for(int phys_down = 0;phys_down < phys_d;phys_down++){//loop over the lower physical index of the MPO: this will be contracted with the phys index of the original MPStensor
 
                         complex<double> factorbis;
-                        
+
                         if(conj)
                            factorbis = factor * std::conj((*theOp)(phys_down,phys_up));
                         else
@@ -505,7 +614,7 @@ void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
          }//mpo left right loop
 
    }//loop over sites
-   
+
 }
 
 /**
@@ -553,9 +662,9 @@ void MPSstate::ApplyH1(TrotterHeisenberg * theTrotter){
 void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrotter){
 
 #ifdef _OPENMP
-      int myID = omp_get_thread_num();
+   int myID = omp_get_thread_num();
 #else
-      int myID = 0;
+   int myID = 0;
 #endif
 
    //fill the allocated memory with the correct values
@@ -600,9 +709,9 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
 void MPSstate::ApplyAF(int k,complex<double> x,TrotterHeisenberg * theTrotter){
 
 #ifdef _OPENMP
-      int myID = omp_get_thread_num();
+   int myID = omp_get_thread_num();
 #else
-      int myID = 0;
+   int myID = 0;
 #endif
 
    //fill the allocated memory with the correct values

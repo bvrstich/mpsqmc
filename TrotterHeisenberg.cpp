@@ -379,6 +379,9 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,complex<double> x,Random *RN){
 
    }
 
+   delete [] work;
+   delete [] rwork;
+
 }
 
 /**

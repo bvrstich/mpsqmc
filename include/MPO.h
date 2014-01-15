@@ -25,6 +25,10 @@ class MPO{
       
       //Get the MPO dimension right of the site
       int dimR(const int site) const;
+
+      int gDtrunc() const;
+
+      complex<double> operator()(int,int,int,int,int);
       
       //Get a certain prefactor
       virtual complex<double> gPrefactor(const int site, const int row, const int col) const = 0;
@@ -42,6 +46,9 @@ class MPO{
       
       //The MPO dimensions (array of length lenght+1, starting with 1 and ending with 1)
       int *MPOdimensions;
+
+      //!the maximal dimension of the MPO
+      int Dtrunc;
       
       //The MPO operator pointers : MPOoperators[site][row][col] is the pointer to that Operator
       Operator **** MPOoperators;

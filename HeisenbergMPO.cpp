@@ -96,6 +96,12 @@ void HeisenbergMPO::fillMPOdimensions(){
    for (int site=length-1; site>locSwitch; site--)
       MPOdimensions[site]   = 2 + 3*(length-site);
 
+   Dtrunc = 1;
+
+   for(int site = 1;site < length;++site)
+      if(Dtrunc < MPOdimensions[site])
+         Dtrunc = MPOdimensions[site];
+
 }
 
 void HeisenbergMPO::fillMPOprefactorsMPOoperators(){

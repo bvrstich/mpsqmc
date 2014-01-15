@@ -31,3 +31,15 @@ int MPO::dimR(const int site) const{
    return MPOdimensions[site+1];
 
 }
+
+int MPO::gDtrunc() const{
+
+   return Dtrunc;
+
+}
+
+complex<double> MPO::operator()(int site,int vL,int su,int sd,int vR){
+
+   return MPOprefactors[site][vL][vR][0] * (*MPOoperators[site][vL][vR])(su,sd);
+
+}

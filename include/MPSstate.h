@@ -52,6 +52,8 @@ class MPSstate{
       
       //Get the pointer to the MPS tensor at site
       MPStensor * gMPStensor(const int site);
+
+      MPStensor &operator[](int site);
       
       //Get the random number generator
       Random * gRN();
@@ -67,6 +69,9 @@ class MPSstate{
       
       //Calculate the overlap
       complex<double> InnerProduct(MPSstate * OtherState);
+
+      //Calculate <phi|O|psi>
+      complex<double> expectation(MPO *,MPSstate * OtherState);
 
       void ChangePhase();
       

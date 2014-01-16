@@ -12,6 +12,7 @@ Walker::Walker(MPSstate * theState, const double weight,int n_trot){
    this->theState      = new MPSstate(theState);
    this->weight        = weight;
    this->n_trot        = n_trot;
+   this->overlap = 1;
 
    VL = new complex<double> [3*n_trot];
 
@@ -39,6 +40,7 @@ Walker::Walker(const int length, const int Dtrunc, const int phys_d, int n_trot,
    this->theState      = new MPSstate(length, Dtrunc, phys_d, RN);
    this->weight        = 1.0;
    this->n_trot        = n_trot;
+   this->overlap = 1;
 
    VL = new complex<double> [3*n_trot];
 
@@ -104,50 +106,17 @@ void Walker::multWeight(const double factor){
 }
 
 /**
- * update the weight of the walker and set the new overlap and local energy.
- * @param dtau timestep
- */
-void Walker::update_weight(MPSstate *Psi0,complex<double> x,complex<double> shift){
-
-   complex<double> prev_overlap = overlap;
-
-   theState->normalize();
-   complex<double> val = theState->InnerProduct(Psi0);
-
-   if (std::real(val) < 0.0){
-
-      theState->ChangePhase();
-      val *= -1;
-
-   }
-
-   this->overlap = val;
-
-   complex<double> scal = overlap/prev_overlap * exp(x*shift - 0.5 * shift*shift);
-
-   weight *= std::abs(scal);
-
-}
-
-/**
  * calculate the overlap with the trial, Psi0
  */
 void Walker::sOverlap(MPSstate * Psi0){
 
+   complex<double> prev_overlap = overlap;
+
    complex<double> norm = theState->normalize();
 
-   weight *= std::real(norm);
+   this->overlap = theState->InnerProduct(Psi0);
 
-   complex<double> val = theState->InnerProduct(Psi0);
-/*
-   if (std::real(val) < 0.0){
-
-      theState->ChangePhase();
-      val *= -1;
-
-   }
-*/
-   this->overlap = val;
+   weight *= std::max(0.0,cos(std::arg(overlap/prev_overlap)));
 
 }
 

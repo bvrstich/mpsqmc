@@ -406,8 +406,8 @@ double AFQMC::PropagateSeparately(){
 
          double x = RN->normal();
 
-      //   complex<double> shift = theWalkers[walker]->gVL(k,r);
-         theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x/* + shift*/,theTrotter);
+         complex<double> shift = theWalkers[walker]->gVL(k,r);
+         theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x + shift,theTrotter);
 
       }
 
@@ -417,10 +417,10 @@ double AFQMC::PropagateSeparately(){
 
       theWalkers[walker]->sOverlap(Psi0);
 
-//      complex<double> prev_EL = theWalkers[walker]->gEL();
+      complex<double> prev_EL = theWalkers[walker]->gEL();
 
       theWalkers[walker]->sEL(HPsi0);
-/*
+
       complex<double> EL = theWalkers[walker]->gEL();
 
       double scale = exp(-0.5 * dtau * std::real(EL + prev_EL));
@@ -428,12 +428,13 @@ double AFQMC::PropagateSeparately(){
       theWalkers[walker]->multWeight(scale);
 
       theWalkers[walker]->sVL(VPsi0);
-*/
+
       sum += theWalkers[walker]->gWeight();
 
    }
 
    return sum;
+
 }
 
 void AFQMC::SeparatePopulationControl(const double scaling){
@@ -520,8 +521,8 @@ complex<double> AFQMC::gEP(){
       const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
-      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy * theWalkers[walker]->gOverlap();
-      projE_den += theWalkers[walker]->gWeight() * theWalkers[walker]->gOverlap();
+      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;//* theWalkers[walker]->gOverlap();
+      projE_den += theWalkers[walker]->gWeight();// * theWalkers[walker]->gOverlap();
 
    }
 
@@ -741,12 +742,13 @@ void AFQMC::testProp(){
 #pragma omp parallel for reduction(+: sum)
    for(int walker = 0;walker < theWalkers.size();++walker){
 
-   //   for(int k = 0;k < n_trot;++k){
+      for(int k = 0;k < n_trot;++k){
+//         for(int r = 0;r < 3;++r){
 
             double x = RN->normal();
-            theWalkers[walker]->gState()->ApplyAF(1,2,(complex<double>)x,theTrotter);
+            theWalkers[walker]->gState()->ApplyAF(k,2,(complex<double>)x,theTrotter);
 
-    //     }
+         }
 
       sum += std::real(theWalkers[walker]->gState()->InnerProduct(Psi0));
 
@@ -757,8 +759,9 @@ void AFQMC::testProp(){
 
    complex<double> tmp(0.0,0.0);
 
-   //for(int k = 0;k < n_trot;++k)
-      tmp += Psi0->InnerProduct(V2Psi0[2*n_trot + 1]);
+   for(int k = 0;k < n_trot;++k)
+      //for(int r = 0;r < 3;++r)
+         tmp += Psi0->InnerProduct(V2Psi0[2*n_trot + k]);
 
    cout << "Energy sum aux fields:\t" << -0.5 * tmp/dtau << endl;
 

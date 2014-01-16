@@ -49,8 +49,8 @@ HeisenbergMPO::HeisenbergMPO(const int length, const int phys_d) : MPO(){
 
    }
 
-   //fillMPOprefactorsMPOoperators();
-   fillMPOprefactorsMPOoperators_debug();
+   fillMPOprefactorsMPOoperators();
+   //fillMPOprefactorsMPOoperators_debug();
 
 }
 

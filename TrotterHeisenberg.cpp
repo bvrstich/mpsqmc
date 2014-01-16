@@ -235,7 +235,7 @@ complex<double> TrotterHeisenberg::gJ(const int k, const int i) const {
  */
 complex<double> TrotterHeisenberg::gV(const int k, const int i) const {
 
-   return V[ k*n_trot + i ]; 
+   return V[ k*length + i ]; 
 
 }
 
@@ -293,7 +293,7 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
                AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
                for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
-                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(  x * V[k*n_trot + site] * eig[l] ) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
+                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(  x * V[k*length + site] * eig[l] ) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
 
             }
 
@@ -310,7 +310,7 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
                AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
                for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sy--> l
-                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp( x * V[k*n_trot + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
+                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp( x * V[k*length + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
 
             }
 
@@ -323,7 +323,7 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
       for(int site = 0;site < length;++site)
          for(int i = 0;i < phys_d;++i){
 
-            AFProp[myID][site*phys_d*phys_d + i*phys_d + i] = exp(x * V[k*n_trot + site] * (*Sz)(i,i) );
+            AFProp[myID][site*phys_d*phys_d + i*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,i) );
 
             for(int j = i + 1;j < phys_d;++j)
                AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = AFProp[myID][site*phys_d*phys_d + i*phys_d + j] = complex<double>(0.0,0.0);

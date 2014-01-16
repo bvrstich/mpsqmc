@@ -25,151 +25,38 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-   int L = 4;
+   int L = 16;
    int DT = 4;
-   int DW = 4;
+   int DW = 2;
    int d = 2;
 
-   HeisenbergMPO theMPO(L*L,d);
+   HeisenbergMPO theMPO(L,d);
 
-   set2DHeis(L,1.0,0.0,theMPO);
+   set2DHeis(sqrt(L),1.0,0.0,theMPO);
+   //set1DHeis(L,1.0,theMPO);
 
    Random RN;
+   //MPSstate Psi0("1D_Heis_L=10_DT=4.mps",&RN);
    MPSstate Psi0("debug_2D.mps",&RN);
   
-/*
-   MPSstate Psi0(L*L,DT,d,&RN);
-   MPSstate HPsi0(L*L,DT,d,&RN);
-
-   HPsi0.ApplyMPO(false,&theMPO,&Psi0);
-
-   int DO = theMPO.gDtrunc();
-
-   complex<double> *tmp = new complex<double> [DT*DT*DO];
-   complex<double> *tmp1 = new complex<double> [DT*DT*DO*d];
-   complex<double> *tmp2 = new complex<double> [DT*DT*DO*d];
-
-   int dimR = Psi0.gDimAtBound(1);
-   int dimRmpo = theMPO.dimR(0);
-
-   for(int i = 0;i < dimR;++i)
-      for(int o = 0;o < dimRmpo;++o)
-         for(int s = 0;s < d;++s){
-
-            tmp2[i*DO*d + o*d + s] = complex<double>(0.0,0.0);
-
-            for(int s_ = 0;s_ < d;++s_)
-               tmp2[i*DO*d + o*d + s] += Psi0[0](s_,0,i) * theMPO(0,0,s_,s,o);
-
-   }
-
-   for(int s = 0;s < d;++s)
-      for(int o = 0;o < dimRmpo;++o)
-         for(int i = 0;i < dimR;++i)
-            cout << s << "\t" << o << "\t" << i << "\t" << tmp2[i*DO*d + o*d + s] << endl;
-
-   for(int o = 0;o < dimRmpo;++o)
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimR;++j){
-
-            tmp[o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
-
-            for(int s = 0;s < d;++s)
-               tmp[o*DT*DT + j*DT + i] += tmp2[i*DO*d + o*d + s] * std::conj(Psi0[0](s,0,j));
-
-         }
-
-   for(int site = 1;site < L*L;++site){
-
-      int dimR = Psi0.gDimAtBound(site + 1);
-      int dimL = Psi0.gDimAtBound(site);
-
-      int dimLmpo = theMPO.dimL(site);
-      int dimRmpo = theMPO.dimR(site);
-
-      //top
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimL;++j)
-            for(int o = 0;o < dimLmpo;++o)
-               for(int s = 0;s < d;++s){
-
-                  tmp1[s*DO*DT*DT + o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
-
-                  for(int k = 0;k < dimL;++k)
-                     tmp1[s*DO*DT*DT + o*DT*DT + j*DT + i] += tmp[o*DT*DT + j*DT + k] * Psi0[site](s,k,i);
-
-               }
-
-      //operator
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimL;++j)
-            for(int o = 0;o < dimRmpo;++o)
-               for(int s = 0;s < d;++s){
-
-                  tmp2[s*DO*DT*DT + o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
-
-                  for(int p = 0;p < dimLmpo;++p)
-                     for(int s_ = 0;s_ < d;++s_)
-                        tmp2[s*DO*DT*DT + o*DT*DT + j*DT + i] += tmp1[s_*DO*DT*DT + p*DT*DT + j*DT + i] * theMPO(site,p,s_,s,o);
-
-               }
-
-      //bottom
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimR;++j)
-            for(int o = 0;o < dimRmpo;++o){
-
-               tmp[o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
-
-               for(int s = 0;s < d;++s)
-                  for(int k = 0;k < dimL;++k)
-                     tmp[o*DT*DT + j*DT + i] += tmp2[s*DO*DT*DT + o*DT*DT + k*DT + i] * std::conj(Psi0[site](s,k,j));
-
-               }
-
-   }
-
-   cout << tmp[0] << endl;
-
-   delete [] tmp;
-   delete [] tmp1;
-   delete [] tmp2;
-
-   cout << Psi0.expectation(&theMPO,&Psi0) << endl;
-*/   
-   int Nwalkers = 1000000;
+   int Nwalkers = 10000;
    double dtau = 0.001;
    int nSteps = 100000;
 
-   TrotterHeisenberg theTrotter(&theMPO,dtau);
-
    AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
-   thePopulation.testProp();
-   //thePopulation.Walk(nSteps);
+   //thePopulation.testProp();
+   thePopulation.Walk(nSteps);
 /*
-   MPSstate HPsi0(L*L,DT,d,&RN);
-   MPSstate H2Psi0(L*L,DT,d,&RN);
+   MPSstate HPsi0(L,DT,d,&RN);
+   MPSstate H2Psi0(L,DT,d,&RN);
 
    HPsi0.ApplyMPO(false,&theMPO,&Psi0);
    H2Psi0.ApplyMPO(false,&theMPO,&HPsi0);
 
-   cout << (1.0 - dtau*HPsi0.InnerProduct(&Psi0) + 0.5*dtau*dtau * H2Psi0.InnerProduct(&Psi0)) << endl;
-   cout << endl;
-   cout << "Energy:\t" << HPsi0.InnerProduct(&Psi0) << endl;
+   cout << HPsi0.InnerProduct(&Psi0) << endl;
+
+   cout << 1.0 - dtau * HPsi0.InnerProduct(&Psi0) + 0.5 * dtau*dtau * H2Psi0.InnerProduct(&Psi0) << endl;
 */
-
-   MPSstate VPsi0(L*L,DT,d,&RN);
-   MPSstate V2Psi0(L*L,DT,d,&RN);
-   MPSstate V3Psi0(L*L,DT,d,&RN);
-   MPSstate V4Psi0(L*L,DT,d,&RN);
-
-   VPsi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&Psi0);
-   V2Psi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&VPsi0);
-   V3Psi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&V2Psi0);
-   V4Psi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&V3Psi0);
-
-   cout << (1.0 + 0.5 * V2Psi0.InnerProduct(&Psi0) + 0.125* V4Psi0.InnerProduct(&Psi0)) << endl;
-
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
 #endif

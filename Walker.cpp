@@ -134,16 +134,19 @@ void Walker::update_weight(MPSstate *Psi0,complex<double> x,complex<double> shif
  */
 void Walker::sOverlap(MPSstate * Psi0){
 
-   theState->normalize();
-   complex<double> val = theState->InnerProduct(Psi0);
+   complex<double> norm = theState->normalize();
 
+   weight *= std::real(norm);
+
+   complex<double> val = theState->InnerProduct(Psi0);
+/*
    if (std::real(val) < 0.0){
 
       theState->ChangePhase();
       val *= -1;
 
    }
-
+*/
    this->overlap = val;
 
 }

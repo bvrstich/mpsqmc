@@ -401,12 +401,13 @@ double AFQMC::PropagateSeparately(){
          theWalkers[walker]->gState()->ApplyH1(theTrotter);
 
       //now loop over the auxiliary fields:
-      for(int k = 0;k < n_trot;++k){
+      for(int k = 0;k < n_trot;++k)
+         for(int r = 0;r < 3;++r){
 
          double x = RN->normal();
 
-         //complex<double> shift = theWalkers[walker]->gVL(k,r);
-         theWalkers[walker]->gState()->ApplyAF(k,(complex<double>)x/* + shift*/,theTrotter);
+      //   complex<double> shift = theWalkers[walker]->gVL(k,r);
+         theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x/* + shift*/,theTrotter);
 
       }
 
@@ -416,18 +417,18 @@ double AFQMC::PropagateSeparately(){
 
       theWalkers[walker]->sOverlap(Psi0);
 
-      //complex<double> prev_EL = theWalkers[walker]->gEL();
+//      complex<double> prev_EL = theWalkers[walker]->gEL();
 
       theWalkers[walker]->sEL(HPsi0);
-
-      //complex<double> EL = theWalkers[walker]->gEL();
 /*
+      complex<double> EL = theWalkers[walker]->gEL();
+
       double scale = exp(-0.5 * dtau * std::real(EL + prev_EL));
 
       theWalkers[walker]->multWeight(scale);
-*/
-      //theWalkers[walker]->sVL(VPsi0);
 
+      theWalkers[walker]->sVL(VPsi0);
+*/
       sum += theWalkers[walker]->gWeight();
 
    }
@@ -453,7 +454,7 @@ void AFQMC::SeparatePopulationControl(const double scaling){
 
       if(weight > maxw)
          maxw = weight;
-/*
+
       if (weight < 0.25){ //Energy doesn't change statistically
 
          int nCopies = (int) ( weight + RN->rand());
@@ -490,7 +491,7 @@ void AFQMC::SeparatePopulationControl(const double scaling){
          }
 
       }
-*/
+
       sum += weight;
 
    }
@@ -732,3 +733,33 @@ delete [] Noffset;
 
 }
 */
+
+void AFQMC::testProp(){
+
+   double sum = 0.0;
+
+#pragma omp parallel for reduction(+: sum)
+   for(int walker = 0;walker < theWalkers.size();++walker){
+
+   //   for(int k = 0;k < n_trot;++k){
+
+            double x = RN->normal();
+            theWalkers[walker]->gState()->ApplyAF(1,2,(complex<double>)x,theTrotter);
+
+    //     }
+
+      sum += std::real(theWalkers[walker]->gState()->InnerProduct(Psi0));
+
+   }
+
+   cout << sum/theWalkers.size() << endl;
+   //cout << log((double)theWalkers.size()/sum)/dtau << endl;
+
+   complex<double> tmp(0.0,0.0);
+
+   //for(int k = 0;k < n_trot;++k)
+      tmp += Psi0->InnerProduct(V2Psi0[2*n_trot + 1]);
+
+   cout << "Energy sum aux fields:\t" << -0.5 * tmp/dtau << endl;
+
+}

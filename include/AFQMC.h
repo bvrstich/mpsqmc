@@ -22,6 +22,8 @@ class AFQMC{
       //Let the walkers propagate for steps steps
       void Walk(const int steps);
 
+      void testProp();
+
    private:
    
       /******************************

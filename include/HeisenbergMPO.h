@@ -30,7 +30,9 @@ class HeisenbergMPO : public MPO{
       
       //Fill MPOprefactors and MPOoperators
       void fillMPOprefactorsMPOoperators();
-      
+
+      void fillMPOprefactorsMPOoperators_debug();
+
       //Get the prefactor for a specific MPO term
       complex<double> gPrefactor(const int site, const int row, const int col) const;
       

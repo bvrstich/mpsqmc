@@ -35,9 +35,9 @@ int main(int argc,char *argv[]){
    set2DHeis(L,1.0,0.0,theMPO);
 
    Random RN;
-
-   //MPSstate Psi0("debug_2D.mps",&RN);
-   
+   MPSstate Psi0("debug_2D.mps",&RN);
+  
+/*
    MPSstate Psi0(L*L,DT,d,&RN);
    MPSstate HPsi0(L*L,DT,d,&RN);
 
@@ -135,16 +135,41 @@ int main(int argc,char *argv[]){
    delete [] tmp1;
    delete [] tmp2;
 
-   cout << HPsi0.InnerProduct(&Psi0) << endl;
    cout << Psi0.expectation(&theMPO,&Psi0) << endl;
-   /*
-      int Nwalkers = 1000;
-      double dtau = 0.01;
-      int nSteps = 100000;
+*/   
+   int Nwalkers = 1000000;
+   double dtau = 0.001;
+   int nSteps = 100000;
 
-      AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
-      thePopulation.Walk(nSteps);
-    */
+   TrotterHeisenberg theTrotter(&theMPO,dtau);
+
+   AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
+   thePopulation.testProp();
+   //thePopulation.Walk(nSteps);
+/*
+   MPSstate HPsi0(L*L,DT,d,&RN);
+   MPSstate H2Psi0(L*L,DT,d,&RN);
+
+   HPsi0.ApplyMPO(false,&theMPO,&Psi0);
+   H2Psi0.ApplyMPO(false,&theMPO,&HPsi0);
+
+   cout << (1.0 - dtau*HPsi0.InnerProduct(&Psi0) + 0.5*dtau*dtau * H2Psi0.InnerProduct(&Psi0)) << endl;
+   cout << endl;
+   cout << "Energy:\t" << HPsi0.InnerProduct(&Psi0) << endl;
+*/
+
+   MPSstate VPsi0(L*L,DT,d,&RN);
+   MPSstate V2Psi0(L*L,DT,d,&RN);
+   MPSstate V3Psi0(L*L,DT,d,&RN);
+   MPSstate V4Psi0(L*L,DT,d,&RN);
+
+   VPsi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&Psi0);
+   V2Psi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&VPsi0);
+   V3Psi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&V2Psi0);
+   V4Psi0.ApplyMPO(false,theTrotter.gV_Op(1,2),&V3Psi0);
+
+   cout << (1.0 + 0.5 * V2Psi0.InnerProduct(&Psi0) + 0.125* V4Psi0.InnerProduct(&Psi0)) << endl;
+
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
 #endif

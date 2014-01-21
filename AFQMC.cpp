@@ -742,11 +742,11 @@ void AFQMC::testProp(){
 #pragma omp parallel for reduction(+: sum)
    for(int walker = 0;walker < theWalkers.size();++walker){
 
-      for(int k = 0;k < n_trot;++k){
-//         for(int r = 0;r < 3;++r){
+      for(int k = 0;k < n_trot;++k)
+         for(int r = 0;r < 3;++r){
 
             double x = RN->normal();
-            theWalkers[walker]->gState()->ApplyAF(k,2,(complex<double>)x,theTrotter);
+            theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x,theTrotter);
 
          }
 
@@ -760,8 +760,8 @@ void AFQMC::testProp(){
    complex<double> tmp(0.0,0.0);
 
    for(int k = 0;k < n_trot;++k)
-      //for(int r = 0;r < 3;++r)
-         tmp += Psi0->InnerProduct(V2Psi0[2*n_trot + k]);
+      for(int r = 0;r < 3;++r)
+         tmp += Psi0->InnerProduct(V2Psi0[r*n_trot + k]);
 
    cout << "Energy sum aux fields:\t" << -0.5 * tmp/dtau << endl;
 

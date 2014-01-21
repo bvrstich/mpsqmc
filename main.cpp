@@ -36,27 +36,35 @@ int main(int argc,char *argv[]){
    //set1DHeis(L,1.0,theMPO);
 
    Random RN;
+   MPSstate Psi0("input/Heisenberg2D/L4DT4.mps",&RN);
    //MPSstate Psi0("1D_Heis_L=10_DT=4.mps",&RN);
-   MPSstate Psi0("debug_2D.mps",&RN);
+   //MPSstate Psi0("input/Heisenberg1D/L20D4.mps",&RN);
   
    int Nwalkers = 10000;
-   double dtau = 0.001;
-   int nSteps = 100000;
+   double dtau = 0.01;
+   int nSteps = 1000000;
 
    AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
    //thePopulation.testProp();
    thePopulation.Walk(nSteps);
 /*
    MPSstate HPsi0(L,DT,d,&RN);
-   MPSstate H2Psi0(L,DT,d,&RN);
 
    HPsi0.ApplyMPO(false,&theMPO,&Psi0);
+   HPsi0.CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+
+   MPSstate H2Psi0(L,DT,d,&RN);
+
    H2Psi0.ApplyMPO(false,&theMPO,&HPsi0);
+   H2Psi0.CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
-   cout << HPsi0.InnerProduct(&Psi0) << endl;
+   MPSstate H3Psi0(L,DT,d,&RN);
+   H3Psi0.ApplyMPO(false,&theMPO,&H2Psi0);
+   H3Psi0.CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
-   cout << 1.0 - dtau * HPsi0.InnerProduct(&Psi0) + 0.5 * dtau*dtau * H2Psi0.InnerProduct(&Psi0) << endl;
+   cout << 1.0 - dtau*Psi0.InnerProduct(&HPsi0) + 0.5 *dtau*dtau * Psi0.InnerProduct(&H2Psi0) - 1.0/6.0 *dtau*dtau*dtau * Psi0.InnerProduct(&H3Psi0) << endl;
 */
+
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();
 #endif
@@ -95,8 +103,12 @@ void set2DHeis(int L,double J1,double J2,HeisenbergMPO &theMPO){
 
 void set1DHeis(int L,double J,HeisenbergMPO &theMPO){
 
-   for (int cnt = 0;cnt < L-1;cnt++)
+   for (int cnt = 0;cnt < L-1;cnt++){
+
       theMPO.sCoupling(cnt,cnt+1,J);
+      theMPO.sCoupling(cnt+1,cnt,J);
+
+   }
 
    theMPO.sField(0.0);
 

@@ -1,6 +1,5 @@
 set output "energies.svg"
-set key left
+set key right
 set pointsize 0.5
 set term svg
-set key off
-plot "energies.txt" u ($1):($3) w l
+plot  "output/Heisenberg1D/ener_L16DT4DW2.txt" u ($1):($3)  w l 

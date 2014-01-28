@@ -24,7 +24,8 @@ CPPSRC	= main.cpp\
            MPSstate.cpp\
            Walker.cpp\
            TrotterHeisenberg.cpp\
-           AFQMC.cpp
+           AFQMC.cpp\
+           WorkSpace.cpp
 
 OBJ	= $(CPPSRC:.cpp=.o)
 

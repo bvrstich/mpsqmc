@@ -14,6 +14,8 @@ using std::complex;
 #include "TwoSiteObject.h"
 #include "TrotterHeisenberg.h"
 
+#include "WorkSpace.h"
+
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 9, 2013 */
 
 class MPSstate{
@@ -99,29 +101,8 @@ class MPSstate{
 
       void ApplyAF(int k,complex<double> x,TrotterHeisenberg * theTrotter);
       
-      //Check whether the work arrays are allocated with at least size size
-      void checkWork1(const int size);
-      void checkWork2(const int size);
-      void checkWork3(const int size);
-      
-      //Get pointer to the work arrays
-      complex<double> * gWork1(){
-         
-         return work1; 
-         
-      }
-
-      complex<double> * gWork2(){
-         
-         return work2; 
-         
-      }
-
-      complex<double> * gWork3(){
-         
-         return work3; 
-         
-      }
+      static void InitWork(int D,int DO,int d);
+      static void ClearWork();
       
    private:
    
@@ -149,18 +130,7 @@ class MPSstate{
       //For compression: the two-site object
       TwoSiteObject * the2siteObject;
       
-      //For QR etc: workspaces
-      complex<double> * work1;
-      complex<double> * work2;
-      complex<double> * work3;
-
-      int sizeWork1;
-      int sizeWork2;
-      int sizeWork3;
-
-      bool work1Allocated;
-      bool work2Allocated;
-      bool work3Allocated;
+      static WorkSpace *ws;
       
 };
 

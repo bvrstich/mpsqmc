@@ -12,6 +12,7 @@
 #include "Lapack.h"
 #include "Walker.h"
 #include "AFQMC.h"
+#include "WorkSpace.h"
 
 using namespace std;
 
@@ -27,27 +28,32 @@ int main(int argc,char *argv[]){
    cout.precision(15);
 
    int L = 16;
-   int DT = 4;
-   int DW = 4;
+   int DT = 32;
+   int DW = 2;
    int d = 2;
 
    HeisenbergMPO theMPO(L,d);
 
    set2DHeis(sqrt(L),1.0,0.0,theMPO);
+
+   MPSstate::InitWork(DT,theMPO.gDtrunc(),d);
+
    //set1DHeis(L,1.0,theMPO);
 
    theMPO.sField(0.0);
 
    Random RN;
 
-   MPSstate Psi0("input/Heisenberg2D/L4DT4.mps",&RN);
+   MPSstate Psi0("input/Heisenberg2D/L4DT32.mps",&RN);
 
-   int Nwalkers = 1000;
+   int Nwalkers = 10000;
    double dtau = 0.01;
-   int nSteps = 100000;
+   int nSteps = 10000;
 
    AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
+
+   MPSstate::ClearWork();
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

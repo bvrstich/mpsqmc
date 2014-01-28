@@ -124,9 +124,9 @@ void Walker::sOverlap(MPSstate * Psi0){
 /** 
  * set the Local Energy: overlap has to be set first!
  */
-void Walker::sEL(MPSstate * HPsi0){
+void Walker::sEL(MPO *theMPO,MPSstate *Psi0){
 
-   EL = theState->InnerProduct(HPsi0)/overlap;
+   EL = std::conj(Psi0->expectation(theMPO,theState))/overlap;
 
 }
 

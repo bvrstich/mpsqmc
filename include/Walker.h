@@ -39,7 +39,7 @@ class Walker{
       //Set the overlap with the trial wfn
       void sOverlap(MPSstate *Psi0);
 
-      void sEL(MPSstate *HPsi0);
+      void sEL(MPO *theMPO,MPSstate *Psi0);
 
       void sVL(MPSstate **VPsi0);
 

@@ -89,9 +89,6 @@ class AFQMC{
       //Trial wfn (one per thread)
       MPSstate * Psi0;
       
-      //MPO times trial wfn (one per thread)
-      MPSstate * HPsi0;
-      
       //Auxiliary field terms (hermitian conjugate!!) times trial wfn. 
       MPSstate ** VPsi0;
 

@@ -335,6 +335,17 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
    checkWork1(theworksize);
    checkWork2(theworksize*phys_d);
    checkWork3(theworksize*phys_d);
+
+   //reset the workspaces to zero
+   for(int i = 0;i < theworksize;++i)
+      work1[i] = complex<double>(0.0,0.0);
+
+   for(int i = 0;i < theworksize*phys_d;++i){
+
+      work2[i] = complex<double>(0.0,0.0);
+      work3[i] = complex<double>(0.0,0.0);
+
+   }
   
    char notrans = 'N';
    char trans = 'T';
@@ -348,11 +359,6 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
    int dimRthis = this->gDimAtBound(1);
    int dimRother = OtherState->gDimAtBound(1);
    int dimRmpo = theMPO->dimR(0);
-
-   for(int i = 0;i < dimRthis;++i)
-      for(int o = 0;o < dimRmpo;++o)
-         for(int s = 0;s < phys_d;++s)
-            work2[s*DO*Dtrunc + o*Dtrunc + i] = complex<double>(0.0,0.0);
 
    int sizeBlock = dimRthis;
    int m,n,k;

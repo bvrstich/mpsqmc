@@ -117,6 +117,7 @@ void Walker::sOverlap(MPSstate * Psi0){
    this->overlap = theState->InnerProduct(Psi0);
 
    weight *= std::max(0.0,cos(std::arg(overlap/prev_overlap)));
+   //weight *= std::real(norm);
 
 }
 

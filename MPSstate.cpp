@@ -95,7 +95,10 @@ MPSstate::MPSstate(MPSstate * toCopy){
 MPSstate::MPSstate(const char *filename,Random *RN){
 
    ifstream in(filename);
+   
    in >> length >> Dtrunc >> phys_d;
+
+   std::cout << length << "\t" << Dtrunc << "\t" << phys_d << endl;
 
    this->RN = RN;
 
@@ -334,19 +337,25 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
    checkWork3(theworksize*phys_d);
   
    char notrans = 'N';
+   char trans = 'T';
    char herm = 'C';
+
    int inc = 1;
+
+   complex<double> one(1.0,0.0);
+   complex<double> zero(0.0,0.0);
 
    int dimRthis = this->gDimAtBound(1);
    int dimRother = OtherState->gDimAtBound(1);
    int dimRmpo = theMPO->dimR(0);
 
-   for(int i = 0;i < Dtrunc;++i)
-      for(int o = 0;o < DO;++o)
+   for(int i = 0;i < dimRthis;++i)
+      for(int o = 0;o < dimRmpo;++o)
          for(int s = 0;s < phys_d;++s)
             work2[s*DO*Dtrunc + o*Dtrunc + i] = complex<double>(0.0,0.0);
 
    int sizeBlock = dimRthis;
+   int m,n,k;
 
    for(int o = 0;o < dimRmpo;++o)
       for(int s = 0;s < phys_d;++s)
@@ -358,70 +367,65 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
                zaxpy_(&sizeBlock,&factor, theTensors[0]->gStorage(s_), &inc, work2 + s*dimRmpo*dimRthis + o*dimRthis, &inc);
 
          }
-/*
-   for(int o = 0;o < dimRmpo;++o)
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimR;++j){
 
-            tmp[o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
+   m = dimRthis * dimRmpo;
+   n = dimRother;
+   k = phys_d;
 
-            for(int s = 0;s < d;++s)
-               tmp[o*DT*DT + j*DT + i] += tmp2[i*DO*d + o*d + s] * std::conj(Psi0[0](s,0,j));
+   zgemm_(&notrans, &herm, &m, &n, &k, &one, work2 , &m, OtherState->gMPStensor(0)->gStorage() , &n, &zero, work1, &m);
 
-         }
+   for(int site = 1;site < theMPO->gLength();++site){
 
-   for(int site = 1;site < L*L;++site){
+      int dimRthis = this->gDimAtBound(site + 1);
+      int dimLthis = this->gDimAtBound(site);
 
-      int dimR = Psi0.gDimAtBound(site + 1);
-      int dimL = Psi0.gDimAtBound(site);
+      int dimRother = OtherState->gDimAtBound(site + 1);
+      int dimLother = OtherState->gDimAtBound(site);
 
-      int dimLmpo = theMPO.dimL(site);
-      int dimRmpo = theMPO.dimR(site);
+      int dimLmpo = theMPO->dimL(site);
+      int dimRmpo = theMPO->dimR(site);
 
-      //top
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimL;++j)
-            for(int o = 0;o < dimLmpo;++o)
-               for(int s = 0;s < d;++s){
+      m = dimRthis * phys_d;
+      n = dimLother * dimLmpo;
+      k = dimLthis;
 
-                  tmp1[s*DO*DT*DT + o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
+      zgemm_(&trans,&notrans, &m, &n, &k, &one, theTensors[site]->gStorage() , &k, work1 , &k, &zero, work3, &m);
 
-                  for(int k = 0;k < dimL;++k)
-                     tmp1[s*DO*DT*DT + o*DT*DT + j*DT + i] += tmp[o*DT*DT + j*DT + k] * Psi0[site](s,k,i);
-
-               }
-
-      //operator
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimL;++j)
+      for(int i = 0;i < dimRthis;++i)
+         for(int j = 0;j < dimLother;++j)
             for(int o = 0;o < dimRmpo;++o)
-               for(int s = 0;s < d;++s){
+               for(int s = 0;s < phys_d;++s)
+                  work2[s*dimLother*dimRthis*dimRmpo + j*dimRthis*dimRmpo + o*dimRthis + i] = 0.0;
 
-                  tmp2[s*DO*DT*DT + o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
+      sizeBlock = dimRthis;
 
-                  for(int p = 0;p < dimLmpo;++p)
-                     for(int s_ = 0;s_ < d;++s_)
-                        tmp2[s*DO*DT*DT + o*DT*DT + j*DT + i] += tmp1[s_*DO*DT*DT + p*DT*DT + j*DT + i] * theMPO(site,p,s_,s,o);
+      for(int o = 0;o < dimRmpo;++o)
+         for(int s = 0;s < phys_d;++s)
+            for(int p = 0;p < dimLmpo;++p)
+               for(int s_ = 0;s_ < phys_d;++s_){
 
-               }
+                  complex<double> factor =  (*theMPO)(site,p,s_,s,o);
 
-      //bottom
-      for(int i = 0;i < dimR;++i)
-         for(int j = 0;j < dimR;++j)
-            for(int o = 0;o < dimRmpo;++o){
-
-               tmp[o*DT*DT + j*DT + i] = complex<double>(0.0,0.0);
-
-               for(int s = 0;s < d;++s)
-                  for(int k = 0;k < dimL;++k)
-                     tmp[o*DT*DT + j*DT + i] += tmp2[s*DO*DT*DT + o*DT*DT + k*DT + i] * std::conj(Psi0[site](s,k,j));
+                  if(std::abs(factor) > 1.0e-15)
+                     for(int j = 0;j < dimLother;++j)
+                        zaxpy_(&sizeBlock,&factor, work3 + j*dimLmpo*dimRthis*phys_d + p*phys_d*dimRthis + s_*dimRthis, &inc, work2 + s*dimLother*dimRthis*dimRmpo + j*dimRthis*dimRmpo + o*dimRthis, &inc);
 
                }
+
+      //permute index
+      for(int s = 0;s < phys_d;++s)
+         for(int i = 0;i < dimLother;++i)
+            for(int j = 0;j < dimRother;++j)
+               work3[s*dimLother*dimRother + i*dimRother + j] = OtherState->gMPStensor(site)->gStorage()[s*dimLother*dimRother + j*dimLother + i];
+       
+      m = dimRthis * dimRmpo;
+      n = dimRother;
+      k = dimLother * phys_d;
+
+      zgemm_(&notrans,&herm, &m, &n, &k, &one, work2 , &m, work3 , &n, &zero, work1, &m);
 
    }
 
-   cout << tmp[0] << endl;
-*/
    return work1[0];
 
 }

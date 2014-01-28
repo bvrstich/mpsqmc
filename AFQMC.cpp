@@ -199,7 +199,6 @@ void AFQMC::SetupTrial(){
          V2Psi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
       }
-
    }
 
 #ifdef USE_MPI_IN_MPSQMC
@@ -473,7 +472,7 @@ void AFQMC::SeparatePopulationControl(const double scaling){
             theWalkers[walker]->sWeight(1.0);
 
       }
-
+      //else{
       if(weight > 1.5){ //statically energy doesn't change
 
          int nCopies =(int) ( weight + RN->rand());
@@ -521,7 +520,7 @@ complex<double> AFQMC::gEP(){
       const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
 
       //For the projected energy
-      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;//* theWalkers[walker]->gOverlap();
+      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;// * theWalkers[walker]->gOverlap();
       projE_den += theWalkers[walker]->gWeight();// * theWalkers[walker]->gOverlap();
 
    }

@@ -41,6 +41,8 @@ class Walker{
 
       void sEL(MPO *theMPO,MPSstate *Psi0);
 
+      void sEL(MPSstate *HPsi0);
+
       void sVL(MPSstate **VPsi0);
 
       void update_weight(MPSstate *Psi0,complex<double> x,complex<double> shift);

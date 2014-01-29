@@ -16,8 +16,9 @@
 
 using namespace std;
 
-void set2DHeis(int L,double J1,double J2,HeisenbergMPO &theMPO);
+void setJ1J2(int L,double J1,double J2,HeisenbergMPO &theMPO);
 void set1DHeis(int L,double J,HeisenbergMPO &theMPO);
+void setAnis2DHeis(int L,double Jx,double Jy,HeisenbergMPO &theMPO);
 
 int main(int argc,char *argv[]){
 
@@ -28,27 +29,28 @@ int main(int argc,char *argv[]){
    cout.precision(15);
 
    int L = 16;
-   int DT = 32;
+   int DT = 4;
    int DW = 2;
    int d = 2;
 
    HeisenbergMPO theMPO(L,d);
 
-   set2DHeis(sqrt(L),1.0,0.0,theMPO);
+   //setJ1J2(sqrt(L),1.0,0.2,theMPO);
+   //setAnis2DHeis(sqrt(L),1.0,0.2,theMPO);
 
    MPSstate::InitWork(DT,theMPO.gDtrunc(),d);
 
-   //set1DHeis(L,1.0,theMPO);
+   set1DHeis(L,1.0,theMPO);
 
    theMPO.sField(0.0);
 
    Random RN;
 
-   MPSstate Psi0("input/Heisenberg2D/L4DT32.mps",&RN);
+   MPSstate Psi0("debug_D4.mps",&RN);
 
    int Nwalkers = 10000;
    double dtau = 0.01;
-   int nSteps = 10000;
+   int nSteps = 100000;
 
    AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
@@ -63,7 +65,7 @@ int main(int argc,char *argv[]){
 
 }
 
-void set2DHeis(int L,double J1,double J2,HeisenbergMPO &theMPO){
+void setJ1J2(int L,double J1,double J2,HeisenbergMPO &theMPO){
 
    for (int row=0; row<L; row++){
       for (int col=0; col<L; col++){
@@ -98,6 +100,30 @@ void set1DHeis(int L,double J,HeisenbergMPO &theMPO){
       theMPO.sCoupling(cnt,cnt+1,J);
       theMPO.sCoupling(cnt+1,cnt,J);
 
+   }
+
+   theMPO.sField(0.0);
+
+}
+
+void setAnis2DHeis(int L,double Jx,double Jy,HeisenbergMPO &theMPO){
+
+   for (int row=0; row<L; row++){
+      for (int col=0; col<L; col++){
+
+         int number = row + L * col;
+
+         int neighbour1 = (row + 1       )%L + L * col;
+         int neighbour2 = (row - 1 + L)%L + L * col;
+         int neighbour3 = row                   + L * ((col - 1 + L)%L);
+         int neighbour4 = row                   + L * ((col + 1       )%L);
+
+         theMPO.sCoupling(number, neighbour1, Jx);
+         theMPO.sCoupling(number, neighbour2, Jx);
+         theMPO.sCoupling(number, neighbour3, Jy);
+         theMPO.sCoupling(number, neighbour4, Jy);
+
+      }
    }
 
    theMPO.sField(0.0);

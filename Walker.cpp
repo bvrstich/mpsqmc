@@ -131,6 +131,15 @@ void Walker::sEL(MPO *theMPO,MPSstate *Psi0){
 }
 
 /** 
+ * set the Local Energy: overlap has to be set first!
+ */
+void Walker::sEL(MPSstate *HPsi0){
+
+   EL = theState->InnerProduct(HPsi0)/overlap;
+
+}
+
+/** 
  * set the v operator Energy: overlap has to be set first!
  */
 void Walker::sVL(MPSstate ** VPsi0){

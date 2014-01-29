@@ -414,11 +414,13 @@ void MPSstate::CompressState(const int truncD){
    }
 
    for (int cnt=0; cnt<length-1; cnt++){
+
       the2siteObject->Compose(theTensors[cnt],theTensors[cnt+1]);
       VirtualD[cnt+1] = the2siteObject->Decompose(theTensors[cnt], theTensors[cnt+1], truncD, true, true);
    }
 
    for (int cnt=length-2; cnt>=0; cnt--){
+
       the2siteObject->Compose(theTensors[cnt],theTensors[cnt+1]);
       VirtualD[cnt+1] = the2siteObject->Decompose(theTensors[cnt], theTensors[cnt+1], truncD, false, true);
    }

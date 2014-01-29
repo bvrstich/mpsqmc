@@ -165,6 +165,16 @@ void AFQMC::SetupTrial(){
    Psi0 = BroadcastCopyConstruct(Psi0);
 #endif
 
+   //Rank 0 calculates MPO times trial, and the result gets copied so every thread on every rank has 1 copy.
+   //HPsi0 = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+
+   if(MPIrank==0){
+
+    //  HPsi0->ApplyMPO(false,theMPO, Psi0);
+     // HPsi0->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+
+   }
+
    //now Apply the hermitian conjugate of the V's times trialstate
    if(MPIrank==0){
 
@@ -250,20 +260,28 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
       theWalkers[0] = new Walker(Psi0,1.0,n_trot);
 
-      if(DW < DT)
+      if(DW < DT){
+
+         theWalkers[0]->gState()->CompressState();//first SVD without compression
          theWalkers[0]->gState()->CompressState(DW);//compress the state to Walker D
+
+      }
 
       theWalkers[0]->sOverlap(Psi0);
       theWalkers[0]->sEL(theMPO,Psi0);
+
+      //theWalkers[0]->sEL(HPsi0);
       theWalkers[0]->sVL(VPsi0);
 
    }
    else{
 
       theWalkers[0] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), n_trot,RN);
+      theWalkers[0]->gState()->normalize();
 
       theWalkers[0]->sOverlap(Psi0);
       theWalkers[0]->sEL(theMPO,Psi0);
+      //theWalkers[0]->sEL(HPsi0);
       theWalkers[0]->sVL(VPsi0);
 
    }
@@ -275,9 +293,11 @@ void AFQMC::SetupWalkers(bool copyTrial){
       else{
 
          theWalkers[cnt] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), n_trot,RN);
+         theWalkers[cnt]->gState()->normalize();
          
          theWalkers[cnt]->sOverlap(Psi0);
          theWalkers[cnt]->sEL(theMPO,Psi0);
+         //theWalkers[cnt]->sEL(HPsi0);
          theWalkers[cnt]->sVL(VPsi0);
 
       }
@@ -405,6 +425,7 @@ double AFQMC::PropagateSeparately(){
       complex<double> prev_EL = theWalkers[walker]->gEL();
 
       theWalkers[walker]->sEL(theMPO,Psi0);
+      //theWalkers[walker]->sEL(HPsi0);
 
       complex<double> EL = theWalkers[walker]->gEL();
 

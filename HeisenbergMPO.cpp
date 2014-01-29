@@ -666,3 +666,21 @@ ostream& operator<<(ostream& os, const HeisenbergMPO& theMPO){
    return os;
    
 }
+
+/**
+ * stupid function for output purposes
+ */
+void HeisenbergMPO::sJ2(double J2_in){
+
+   J2 = J2_in;
+
+}
+
+/**
+ * stupid function for output purposes
+ */
+double HeisenbergMPO::gJ2(){
+
+   return J2;
+
+}

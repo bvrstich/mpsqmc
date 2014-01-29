@@ -59,8 +59,14 @@ class HeisenbergMPO : public MPO{
       
       //Print its contents
       friend ostream& operator<<(ostream& os, const HeisenbergMPO& theMPO);
+
+      double gJ2();
+      
+      void sJ2(double);
       
    private:
+
+      double J2;
 
       complex<double> fOne;
       complex<double> fZero;

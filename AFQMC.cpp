@@ -166,12 +166,12 @@ void AFQMC::SetupTrial(){
 #endif
 
    //Rank 0 calculates MPO times trial, and the result gets copied so every thread on every rank has 1 copy.
-   //HPsi0 = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
+   HPsi0 = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
 
    if(MPIrank==0){
 
-    //  HPsi0->ApplyMPO(false,theMPO, Psi0);
-     // HPsi0->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+      HPsi0->ApplyMPO(false,theMPO, Psi0);
+      HPsi0->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
    }
 
@@ -268,9 +268,8 @@ void AFQMC::SetupWalkers(bool copyTrial){
       }
 
       theWalkers[0]->sOverlap(Psi0);
-      theWalkers[0]->sEL(theMPO,Psi0);
-
-      //theWalkers[0]->sEL(HPsi0);
+      //theWalkers[0]->sEL(theMPO,Psi0);
+      theWalkers[0]->sEL(HPsi0);
       theWalkers[0]->sVL(VPsi0);
 
    }
@@ -280,8 +279,8 @@ void AFQMC::SetupWalkers(bool copyTrial){
       theWalkers[0]->gState()->normalize();
 
       theWalkers[0]->sOverlap(Psi0);
-      theWalkers[0]->sEL(theMPO,Psi0);
-      //theWalkers[0]->sEL(HPsi0);
+      //theWalkers[0]->sEL(theMPO,Psi0);
+      theWalkers[0]->sEL(HPsi0);
       theWalkers[0]->sVL(VPsi0);
 
    }
@@ -296,8 +295,8 @@ void AFQMC::SetupWalkers(bool copyTrial){
          theWalkers[cnt]->gState()->normalize();
          
          theWalkers[cnt]->sOverlap(Psi0);
-         theWalkers[cnt]->sEL(theMPO,Psi0);
-         //theWalkers[cnt]->sEL(HPsi0);
+         //theWalkers[cnt]->sEL(theMPO,Psi0);
+         theWalkers[cnt]->sEL(HPsi0);
          theWalkers[cnt]->sVL(VPsi0);
 
       }
@@ -312,8 +311,17 @@ void AFQMC::Walk(const int steps){
 
    if (MPIrank==0){
 
+      int L = sqrt(theMPO->gLength());
+      double J2 = theMPO->gJ2();
+
+      int j2 = 10*J2;
+
       char filename[100];
-      sprintf(filename,"output/Heisenberg1D/ener_L%dDT%dDW%d.txt",theMPO->gLength(),DT,DW);
+
+      if(j2 == 10)
+         sprintf(filename,"output/J1J2/%dx%d/J2=1.0/DT%dDW%d.txt",L,L,DT,DW);
+      else
+         sprintf(filename,"output/J1J2/%dx%d/J2=0.%d/DT%dDW%d.txt",L,L,j2,DT,DW);
 
       ofstream output(filename,ios::trunc);
 
@@ -424,8 +432,8 @@ double AFQMC::PropagateSeparately(){
 
       complex<double> prev_EL = theWalkers[walker]->gEL();
 
-      theWalkers[walker]->sEL(theMPO,Psi0);
-      //theWalkers[walker]->sEL(HPsi0);
+      //theWalkers[walker]->sEL(theMPO,Psi0);
+      theWalkers[walker]->sEL(HPsi0);
 
       complex<double> EL = theWalkers[walker]->gEL();
 
@@ -555,7 +563,17 @@ complex<double> AFQMC::gEP(){
 void AFQMC::write(const int step,const int nwalkers,const double EP, const double ET){
 
    char filename[100];
-   sprintf(filename,"output/Heisenberg1D/ener_L%dDT%dDW%d.txt",theMPO->gLength(),DT,DW);
+
+   int L = sqrt(theMPO->gLength());
+   double J2 = theMPO->gJ2();
+
+   int j2 = 10*J2;
+
+   if(j2 == 10)
+      sprintf(filename,"output/J1J2/%dx%d/J2=1.0/DT%dDW%d.txt",L,L,DT,DW);
+   else
+      sprintf(filename,"output/J1J2/%dx%d/J2=0.%d/DT%dDW%d.txt",L,L,j2,DT,DW);
+
    ofstream output(filename,ios::app);
    output.precision(10);
    output << step << "\t\t" << nwalkers << "\t" << EP << "\t\t" << ET << endl;

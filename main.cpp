@@ -27,7 +27,7 @@ int main(int argc,char *argv[]){
 #endif
 
    cout.precision(15);
-
+/*
    int L = atoi(argv[1]); 
    int J2 = atoi(argv[2]);
    int DT = atoi(argv[3]);
@@ -37,6 +37,7 @@ int main(int argc,char *argv[]){
    HeisenbergMPO theMPO(L*L,d);
 
    setJ1J2(L,1.0,(double)J2*0.1,theMPO);
+
    theMPO.sJ2(J2*0.1);
    theMPO.sField(0.0);
 
@@ -46,11 +47,42 @@ int main(int argc,char *argv[]){
 
    char filename[100];
 
-   sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/D%d.mps",L,L,J2,DT);
+   if(J2 == 10)
+      sprintf(filename,"input/J1J2/%dx%d/J2=1.0/D%d.mps",L,L,DT);
+   else
+      sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/D%d.mps",L,L,J2,DT);
 
    MPSstate Psi0(filename,&RN);
 
    int Nwalkers = 10000;
+   double dtau = 0.01;
+   int nSteps = 100000;
+
+   AFQMC thePopulation(&theMPO, &RN,&Psi0,DW, Nwalkers, dtau);
+   thePopulation.Walk(nSteps);
+ 
+   MPSstate::ClearWork();
+   */
+   int L = 4; 
+   int J2 = 0;
+   int DT = 4;
+   int DW = 2;
+   int d = 2;
+
+   HeisenbergMPO theMPO(L*L,d);
+
+   setJ1J2(L,1.0,(double)J2*0.1,theMPO);
+
+   theMPO.sJ2(J2*0.1);
+   theMPO.sField(0.0);
+
+   MPSstate::InitWork(DT,theMPO.gDtrunc(),d);
+
+   Random RN;
+
+   MPSstate Psi0("/home/bright/bestanden/programmas/dmrg/J1J2/4x4/J2=0.0/Psi0/DT=4.mps",&RN);
+
+   int Nwalkers = 1000;
    double dtau = 0.01;
    int nSteps = 100000;
 

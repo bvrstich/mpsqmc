@@ -131,6 +131,7 @@ AFQMC::~AFQMC(){
 
    //AFQMC::SetupTrial
    delete Psi0;
+   delete HPsi0;
 
    for(int k = 0;k < 3*n_trot;++k){
 
@@ -166,15 +167,15 @@ void AFQMC::SetupTrial(){
 #endif
 
    //Rank 0 calculates MPO times trial, and the result gets copied so every thread on every rank has 1 copy.
-   HPsi0 = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-
+   HPsi0 = new MPSstate("/home/bright/bestanden/programmas/dmrg/J1J2/4x4/J2=0.0/HPsi0/DT=4.mps",RN);
+/*
    if(MPIrank==0){
 
       HPsi0->ApplyMPO(false,theMPO, Psi0);
       HPsi0->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
    }
-
+*/
    //now Apply the hermitian conjugate of the V's times trialstate
    if(MPIrank==0){
 
@@ -185,16 +186,16 @@ void AFQMC::SetupTrial(){
          for(int k = 0;k < n_trot;++k){
 
          VPsi0[r*n_trot + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-
          VPsi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
-         VPsi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
-
+  //       VPsi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+         
          V2Psi0[r*n_trot + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-
          V2Psi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , VPsi0[r*n_trot + k]);
-         V2Psi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
 
-      }
+   //      V2Psi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+
+     }
+   
    }
 
 #ifdef USE_MPI_IN_MPSQMC
@@ -258,17 +259,10 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
    if(copyTrial){
 
-      theWalkers[0] = new Walker(Psi0,1.0,n_trot);
-
-      if(DW < DT){
-
-         theWalkers[0]->gState()->CompressState();//first SVD without compression
-         theWalkers[0]->gState()->CompressState(DW);//compress the state to Walker D
-
-      }
+      MPSstate input("/home/bright/bestanden/programmas/dmrg/J1J2/4x4/J2=0.0/PsiW/DT=4.mps",RN);
+      theWalkers[0] = new Walker(&input,1.0,n_trot);
 
       theWalkers[0]->sOverlap(Psi0);
-      //theWalkers[0]->sEL(theMPO,Psi0);
       theWalkers[0]->sEL(HPsi0);
       theWalkers[0]->sVL(VPsi0);
 
@@ -279,7 +273,6 @@ void AFQMC::SetupWalkers(bool copyTrial){
       theWalkers[0]->gState()->normalize();
 
       theWalkers[0]->sOverlap(Psi0);
-      //theWalkers[0]->sEL(theMPO,Psi0);
       theWalkers[0]->sEL(HPsi0);
       theWalkers[0]->sVL(VPsi0);
 

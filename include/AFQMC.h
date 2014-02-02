@@ -2,8 +2,7 @@
 #define AFQMC_H
 
 #include "MPSstate.h"
-#include "HeisenbergMPO.h"
-#include "TrotterHeisenberg.h"
+#include "TrotterJ1J2.h"
 #include "Walker.h"
 #include <vector>
 
@@ -14,7 +13,7 @@ class AFQMC{
    public:
    
       //constructor with input trialwavefunction
-      AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
+      AFQMC(TrotterJ1J2 *theTrotter, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
       
       //Destructor
       ~AFQMC();
@@ -22,19 +21,14 @@ class AFQMC{
       //Let the walkers propagate for steps steps
       void Walk(const int steps);
 
-      void testProp();
-
    private:
    
       /******************************
       *** Constructor information ***
       ******************************/
    
-      //The problem MPO
-      HeisenbergMPO * theMPO;
-      
       //The Trotter decomposition of the MPO
-      TrotterHeisenberg * theTrotter;
+      TrotterJ1J2 *theTrotter;
 
       //number of trotter terms
       int n_trot;

@@ -540,53 +540,13 @@ void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
 }
 
 /**
- * Apply the single site part of the Hamiltonian e^{-dtH1} to the MPS. actually, there is a factor 1/2 here because of: e^-dtH = e^-dtH1/2 e^-dtH2 e^-dtH1/2
- */
-void MPSstate::ApplyH1(TrotterHeisenberg * theTrotter){
-  
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-   
-   for (int site=0; site<length; site++){
-
-      int sizeBlock = VirtualD[site] * VirtualD[site+1];
-      int size = sizeBlock * phys_d;
-
-      for (int cnt=0; cnt<size; cnt++)
-         ws->work1[myID][cnt] = 0.0;
-
-      for (int phys_up=0; phys_up<phys_d; phys_up++)
-         for (int phys_down=0; phys_down<phys_d; phys_down++){
-
-            complex<double> OperatorValue = theTrotter->gH1Prop( phys_up, phys_down);
-
-            if (std::abs(OperatorValue) > 1.0e-15){
-
-               int inc = 1;
-               zaxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, ws->work1[myID] + phys_up*sizeBlock, &inc);
-
-            }
-
-         }
-
-      int inc = 1;
-      zcopy_(&size, ws->work1[myID], &inc, theTensors[site]->gStorage(), &inc);
-
-   }
-
-}
-
-/**
  * Apply a specific auxiliary field operator to the MPS
  * @param k the index of the eigenvector of J_[ij], part of the index of the auxiliary field
  * @param r the 'type' of the single-site operator: 0=e^Sx, 1=e^Sy, 2=e^Sz
  * @param x stochastic variable drawn from a normal distribution, the auxiliary field
  * @param theTrotter the object containing the info about the propagators
  */
-void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrotter){
+void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterJ1J2 * theTrotter){
 
 #ifdef _OPENMP
    int myID = omp_get_thread_num();
@@ -605,8 +565,8 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
       for (int cnt=0; cnt<size; cnt++)
          ws->work1[myID][cnt] = 0.0;
 
-      for (int phys_up=0; phys_up<phys_d; phys_up++)
-         for (int phys_down=0; phys_down<phys_d; phys_down++){
+      for(int phys_up=0; phys_up<phys_d; phys_up++)
+         for(int phys_down=0; phys_down<phys_d; phys_down++){
 
             complex<double> OperatorValue = theTrotter->gAFProp(myID,site,phys_up,phys_down);
 
@@ -623,6 +583,7 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
       zcopy_(&size, ws->work1[myID], &inc, theTensors[site]->gStorage(), &inc);
 
    }
+
 }
 
 /**
@@ -632,7 +593,7 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrot
  * @param x stochastic variable drawn from a normal distribution, the auxiliary field
  * @param theTrotter the object containing the info about the propagators
  */
-void MPSstate::ApplyAF(int k,complex<double> x,TrotterHeisenberg * theTrotter){
+void MPSstate::ApplyAF(int k,complex<double> x,TrotterJ1J2 * theTrotter){
 
 #ifdef _OPENMP
    int myID = omp_get_thread_num();

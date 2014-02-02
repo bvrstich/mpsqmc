@@ -15,22 +15,20 @@ using namespace std;
 
 /**
  * constructor of the AFQMC object, takes input parameters that define the QMC walk.
- * @param theMPO MPO containing relevant matrix elements, defines system being studied
+ * @param theTrotter trotter terms for the interaction
  * @param Psi0 input trialwavefunction
  * @param Dtrunc dimension of the walkers
  * @param Nwalkers number of Walker states
  * @param dtau time step of each evolution
  */
-AFQMC::AFQMC(HeisenbergMPO * theMPO, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
+AFQMC::AFQMC(TrotterJ1J2 *theTrotter,Random *RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
 
-   this->theMPO = theMPO;
    this->RN = RN;
    this->DT = Psi0_in->gDtrunc();
    this->DW = DW;
    this->dtau = dtau;
-   this->phys_d = theMPO->gPhys_d();
-
-   this->theTrotter = new TrotterHeisenberg(theMPO,dtau);
+   this->phys_d = theTrotter->gPhys_d();
+   this->theTrotter = theTrotter;
    n_trot = theTrotter->gn_trot();
 
    this->totalNDesiredWalkers = Nwalkers;
@@ -126,22 +124,14 @@ void AFQMC::SetupOMPandMPILoadDistribution(){
 
 AFQMC::~AFQMC(){
 
-   //AFQMC::AFQMC
-   delete theTrotter;
-
    //AFQMC::SetupTrial
    delete Psi0;
    delete HPsi0;
 
-   for(int k = 0;k < 3*n_trot;++k){
-
+   for(int k = 0;k < 3*n_trot;++k)
       delete VPsi0[k];
-      delete V2Psi0[k];
-
-   }
 
    delete [] VPsi0;
-   delete [] V2Psi0;
 
    //AFQMC::SetupWalkers
    for (int cnt = 0;cnt < theWalkers.size(); cnt++)
@@ -152,6 +142,8 @@ AFQMC::~AFQMC(){
    delete [] NDesiredWalkersPerRank;
    delete [] NCurrentWalkersPerRank;
 
+   MPSstate::ClearWork();
+
 }
 
 /**
@@ -159,43 +151,40 @@ AFQMC::~AFQMC(){
  */
 void AFQMC::SetupTrial(){
 
-   if(MPIrank==0)
-      Psi0->LeftNormalize();
-
 #ifdef USE_MPI_IN_MPSQMC
    Psi0 = BroadcastCopyConstruct(Psi0);
 #endif
 
-   //Rank 0 calculates MPO times trial, and the result gets copied so every thread on every rank has 1 copy.
-   HPsi0 = new MPSstate("/home/bright/bestanden/programmas/dmrg/J1J2/4x4/J2=0.0/HPsi0/DT=4.mps",RN);
-/*
-   if(MPIrank==0){
+   int L = sqrt(theTrotter->glength());
 
-      HPsi0->ApplyMPO(false,theMPO, Psi0);
-      HPsi0->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+   double J2 = theTrotter->gJ2();
+   int j2 = 10*J2;
 
-   }
-*/
+   char filename[100];
+
+   if(J2 == 10)
+      sprintf(filename,"input/J1J2/%dx%d/J2=1.0/HPsi0/DT=%d.mps",L,L,DT);
+   else
+      sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/HPsi0/DT=%d.mps",L,L,j2,DT);
+
+   HPsi0 = new MPSstate(filename,RN);
+
+   //initialize workspace
+   MPSstate::InitWork(Psi0->gDtrunc(),HPsi0->gDtrunc(),theTrotter->gPhys_d());
+
    //now Apply the hermitian conjugate of the V's times trialstate
    if(MPIrank==0){
 
       VPsi0 = new MPSstate * [3*n_trot];
-      V2Psi0 = new MPSstate * [3*n_trot];
 
       for(int r = 0;r < 3;++r)
          for(int k = 0;k < n_trot;++k){
 
-         VPsi0[r*n_trot + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-         VPsi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
-  //       VPsi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
-         
-         V2Psi0[r*n_trot + k] = new MPSstate(theMPO->gLength(),DT,theMPO->gPhys_d(),RN);
-         V2Psi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , VPsi0[r*n_trot + k]);
+            VPsi0[r*n_trot + k] = new MPSstate(theTrotter->glength(),DT,theTrotter->gPhys_d(),RN);
+            VPsi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
 
-   //      V2Psi0[r*n_trot + k]->CompressState(); //Compression only throws away Schmidt values which are numerically zero...
+         }
 
-     }
-   
    }
 
 #ifdef USE_MPI_IN_MPSQMC
@@ -213,7 +202,7 @@ MPSstate * AFQMC::BroadcastCopyConstruct(MPSstate * pointer){
 
 #ifdef USE_MPI_IN_MPSQMC
    //Make the Psi storage exactly the same as rank 0 Psi storage
-   int dim = theMPO->gLength()+1;
+   int dim = theMPO->glength()+1;
    int * VirtualDims = new int[dim];
    int truncDim = 0;
 
@@ -230,12 +219,12 @@ MPSstate * AFQMC::BroadcastCopyConstruct(MPSstate * pointer){
    MPI::COMM_WORLD.Bcast(&truncDim, 1, MPI::INT, 0);
 
    if(MPIrank>0)
-      pointer = new MPSstate(theMPO->gLength(), truncDim, theMPO->gPhys_d(), VirtualDims, RN);
+      pointer = new MPSstate(theMPO->glength(), truncDim, theMPO->gPhys_d(), VirtualDims, RN);
 
    delete [] VirtualDims;
 
    //Broadcast the Psi storage from rank 0
-   for (int site=0; site<theMPO->gLength(); site++){
+   for (int site=0; site<theMPO->glength(); site++){
 
       int dim = pointer->gDimAtBound(site) * pointer->gDimAtBound(site+1) * pointer->gPhys_d();
 
@@ -259,7 +248,20 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
    if(copyTrial){
 
-      MPSstate input("/home/bright/bestanden/programmas/dmrg/J1J2/4x4/J2=0.0/PsiW/DT=4.mps",RN);
+      int L = sqrt(theTrotter->glength());
+
+      double J2 = theTrotter->gJ2();
+      int j2 = 10*J2;
+
+      char filename[100];
+
+      if(J2 == 10)
+         sprintf(filename,"input/J1J2/%dx%d/J2=1.0/PsiW/DT=%d.mps",L,L,DT);
+      else
+         sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/PsiW/DT=%d.mps",L,L,j2,DT);
+
+      MPSstate input(filename,RN);
+
       theWalkers[0] = new Walker(&input,1.0,n_trot);
 
       theWalkers[0]->sOverlap(Psi0);
@@ -269,7 +271,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
    }
    else{
 
-      theWalkers[0] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), n_trot,RN);
+      theWalkers[0] = new Walker(theTrotter->glength(), DW, theTrotter->gPhys_d(), n_trot,RN);
       theWalkers[0]->gState()->normalize();
 
       theWalkers[0]->sOverlap(Psi0);
@@ -284,11 +286,10 @@ void AFQMC::SetupWalkers(bool copyTrial){
          theWalkers[cnt] = new Walker(theWalkers[0]);
       else{
 
-         theWalkers[cnt] = new Walker(theMPO->gLength(), DW, theMPO->gPhys_d(), n_trot,RN);
+         theWalkers[cnt] = new Walker(theTrotter->glength(), DW, theTrotter->gPhys_d(), n_trot,RN);
          theWalkers[cnt]->gState()->normalize();
-         
+
          theWalkers[cnt]->sOverlap(Psi0);
-         //theWalkers[cnt]->sEL(theMPO,Psi0);
          theWalkers[cnt]->sEL(HPsi0);
          theWalkers[cnt]->sVL(VPsi0);
 
@@ -304,8 +305,8 @@ void AFQMC::Walk(const int steps){
 
    if (MPIrank==0){
 
-      int L = sqrt(theMPO->gLength());
-      double J2 = theMPO->gJ2();
+      int L = sqrt(theTrotter->glength());
+      double J2 = theTrotter->gJ2();
 
       int j2 = 10*J2;
 
@@ -402,30 +403,21 @@ double AFQMC::PropagateSeparately(){
 #pragma omp parallel for reduction(+: sum)
    for(int walker=0; walker < theWalkers.size(); walker++){
 
-      //Propagate with single site terms --> exp (dtau * h * SiZ * 0.5)  for Hterm = -h SiZ, if a field is present
-      if(theTrotter->gIsMagneticField())
-         theWalkers[walker]->gState()->ApplyH1(theTrotter);
-
       //now loop over the auxiliary fields:
       for(int k = 0;k < n_trot;++k)
          for(int r = 0;r < 3;++r){
 
-         double x = RN->normal();
+            double x = RN->normal();
 
-         complex<double> shift = theWalkers[walker]->gVL(k,r);
-         theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x + shift,theTrotter);
+            complex<double> shift = theWalkers[walker]->gVL(k,r);
+            theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x + shift,theTrotter);
 
-      }
-
-      //Propagate with single site terms --> exp (dtau * h * SiZ * 0.5)  for Hterm = -h SiZ
-      if(theTrotter->gIsMagneticField())
-         theWalkers[walker]->gState()->ApplyH1(theTrotter);
+         }
 
       theWalkers[walker]->sOverlap(Psi0);
 
       complex<double> prev_EL = theWalkers[walker]->gEL();
 
-      //theWalkers[walker]->sEL(theMPO,Psi0);
       theWalkers[walker]->sEL(HPsi0);
 
       complex<double> EL = theWalkers[walker]->gEL();
@@ -516,84 +508,84 @@ void AFQMC::SeparatePopulationControl(const double scaling){
    MPI::COMM_WORLD.Allreduce(NCurrentWalkersPerRank + MPIrank, &totalNCurrentWalkers, 1, MPI::INT, MPI::SUM);
 #endif
 
-}
-
-complex<double> AFQMC::gEP(){
-
-   complex<double> projE_num = 0.0;
-   complex<double> projE_den = 0.0;
-
-   for(int walker = 0;walker < theWalkers.size();walker++){
-
-      const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
-
-      //For the projected energy
-      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;// * theWalkers[walker]->gOverlap();
-      projE_den += theWalkers[walker]->gWeight();// * theWalkers[walker]->gOverlap();
-
    }
 
-   complex<double> EP = 0.0;
+   complex<double> AFQMC::gEP(){
+
+      complex<double> projE_num = 0.0;
+      complex<double> projE_den = 0.0;
+
+      for(int walker = 0;walker < theWalkers.size();walker++){
+
+         const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
+
+         //For the projected energy
+         projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;// * theWalkers[walker]->gOverlap();
+         projE_den += theWalkers[walker]->gWeight();// * theWalkers[walker]->gOverlap();
+
+      }
+
+      complex<double> EP = 0.0;
 
 #ifdef USE_MPI_IN_MPSQMC
-   //For the projected energy
-   double totalNum = 0.0;
-   double totalDen = 0.0;
+      //For the projected energy
+      double totalNum = 0.0;
+      double totalDen = 0.0;
 
-   MPI::COMM_WORLD.Allreduce(&projE_num, &totalNum, 1, MPI::DOUBLE, MPI::SUM);
-   MPI::COMM_WORLD.Allreduce(&projE_den, &totalDen, 1, MPI::DOUBLE, MPI::SUM);
+      MPI::COMM_WORLD.Allreduce(&projE_num, &totalNum, 1, MPI::DOUBLE, MPI::SUM);
+      MPI::COMM_WORLD.Allreduce(&projE_den, &totalDen, 1, MPI::DOUBLE, MPI::SUM);
 
-   EP = totalE_num / totalE_den;
+      EP = totalE_num / totalE_den;
 #else
-   EP = projE_num / projE_den;
+      EP = projE_num / projE_den;
 #endif
 
-   return EP;
-
-}
-
-
-void AFQMC::write(const int step,const int nwalkers,const double EP, const double ET){
-
-   char filename[100];
-
-   int L = sqrt(theMPO->gLength());
-   double J2 = theMPO->gJ2();
-
-   int j2 = 10*J2;
-
-   if(j2 == 10)
-      sprintf(filename,"output/J1J2/%dx%d/J2=1.0/DT%dDW%d.txt",L,L,DT,DW);
-   else
-      sprintf(filename,"output/J1J2/%dx%d/J2=0.%d/DT%dDW%d.txt",L,L,j2,DT,DW);
-
-   ofstream output(filename,ios::app);
-   output.precision(10);
-   output << step << "\t\t" << nwalkers << "\t" << EP << "\t\t" << ET << endl;
-   output.close();
-
-}
-
-/*
-   void AFQMC::BubbleSort(double * values, int * order, const int length){
-
-   for (int cnt=0; cnt<length; cnt++){ order[cnt] = cnt; }
-   bool allOK = false;
-   while (!allOK){
-   allOK = true;
-   for (int cnt=0; cnt<length-1; cnt++){
-   if ( values[ order[cnt] ] < values[ order[cnt+1] ] ){
-   allOK = false;
-   int temp = order[cnt];
-   order[cnt] = order[cnt+1];
-   order[cnt+1] = temp;
-   }
-   }
-   } // Now for all index: values[ order[index] ] >= values[ order[index+1] ]
+      return EP;
 
    }
 
-   void AFQMC::PopulationBalancing(){
+
+   void AFQMC::write(const int step,const int nwalkers,const double EP, const double ET){
+
+      char filename[100];
+
+      int L = sqrt(theTrotter->glength());
+      double J2 = theTrotter->gJ2();
+
+      int j2 = 10*J2;
+
+      if(j2 == 10)
+         sprintf(filename,"output/J1J2/%dx%d/J2=1.0/DT%dDW%d.txt",L,L,DT,DW);
+      else
+         sprintf(filename,"output/J1J2/%dx%d/J2=0.%d/DT%dDW%d.txt",L,L,j2,DT,DW);
+
+      ofstream output(filename,ios::app);
+      output.precision(10);
+      output << step << "\t\t" << nwalkers << "\t" << EP << "\t\t" << ET << endl;
+      output.close();
+
+   }
+
+   /*
+      void AFQMC::BubbleSort(double * values, int * order, const int length){
+
+      for (int cnt=0; cnt<length; cnt++){ order[cnt] = cnt; }
+      bool allOK = false;
+      while (!allOK){
+      allOK = true;
+      for (int cnt=0; cnt<length-1; cnt++){
+      if ( values[ order[cnt] ] < values[ order[cnt+1] ] ){
+      allOK = false;
+      int temp = order[cnt];
+      order[cnt] = order[cnt+1];
+      order[cnt+1] = temp;
+      }
+      }
+      } // Now for all index: values[ order[index] ] >= values[ order[index+1] ]
+
+      }
+
+      void AFQMC::PopulationBalancing(){
 
 #ifdef USE_MPI_IN_MPSQMC
 const bool debuginfoprint = true;
@@ -751,35 +743,3 @@ delete [] Noffset;
 
 }
 */
-
-void AFQMC::testProp(){
-
-   double sum = 0.0;
-
-#pragma omp parallel for reduction(+: sum)
-   for(int walker = 0;walker < theWalkers.size();++walker){
-
-      for(int k = 0;k < n_trot;++k)
-         for(int r = 0;r < 3;++r){
-
-            double x = RN->normal();
-            theWalkers[walker]->gState()->ApplyAF(k,r,(complex<double>)x,theTrotter);
-
-         }
-
-      sum += std::real(theWalkers[walker]->gState()->InnerProduct(Psi0));
-
-   }
-
-   cout << sum/theWalkers.size() << endl;
-   //cout << log((double)theWalkers.size()/sum)/dtau << endl;
-
-   complex<double> tmp(0.0,0.0);
-
-   for(int k = 0;k < n_trot;++k)
-      for(int r = 0;r < 3;++r)
-         tmp += Psi0->InnerProduct(V2Psi0[r*n_trot + k]);
-
-   cout << "Energy sum aux fields:\t" << -0.5 * tmp/dtau << endl;
-
-}

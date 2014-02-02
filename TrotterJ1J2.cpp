@@ -3,7 +3,7 @@
 #include <iostream>
 #include "omp.h"
 
-#include "TrotterHeisenberg.h"
+#include "TrotterJ1J2.h"
 #include "Random.h"
 #include "OpSz.h"
 #include "OpSx.h"
@@ -12,18 +12,19 @@
 
 using namespace std;
 
-/*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 14, 2013 */
-
 /**
- * constructor of the TrotterHeisenberg object. This contains the information about the trotter decomposition of one- and two-body terms.
- * @param theMPO MPO object containing the information about the system
+ * constructor of the TrotterJ1J2 object. This contains the information about the trotter decomposition of one- and two-body terms.
+ * @param L dimension of the lattice
+ * @param d physical dimension
+ * @param J2 coupling strength
  * @param dtau timestep
  */
-TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
+TrotterJ1J2::TrotterJ1J2(int L,int d,double J2,const double dtau){
 
-   this->length = theMPO->gLength();
-   this->phys_d = theMPO->gPhys_d();
+   this->length = L*L;
+   this->phys_d = d;
    this->dtau = dtau;
+   this->J2 = J2;
 
    Sx = new OpSx(phys_d);
    Sy = new OpSy(phys_d);
@@ -32,21 +33,36 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
    //The couplings, and the different couplings
    J = new complex<double> [length * length];
 
-   for(int i = 0;i < length;i++){
+   for(int i = 0;i < length;i++)
+      for(int j = 0;j < length;j++)
+         J[j*length + i] = 0.0;
 
-      J[ i*length + i ] = 0.0;
+   for (int row=0; row< L; row++)
+      for (int col=0; col< L; col++){
 
-      for(int j = i + 1;j < length;j++){
+         int number = row + L * col;
 
-         complex<double> theCoupling = theMPO->gCoupling(i,j);
+         int neighbour1 = (row + 1       )%L + L * col;
+         int neighbour2 = (row - 1 + L)%L + L * col;
+         int neighbour3 = row                   + L * ((col - 1 + L)%L);
+         int neighbour4 = row                   + L * ((col + 1       )%L);
 
-         //couplingmatrix will contain the coupling J_[ij]
-         J[ j*length + i ] = theCoupling;
-         J[ i*length + j ] = conj(theCoupling);
+         J[number*length + neighbour1] = 1.0;
+         J[number*length + neighbour2] = 1.0;
+         J[number*length + neighbour3] = 1.0;
+         J[number*length + neighbour4] = 1.0;
+
+         int neighbour5 = (row + 1       )%L + L * ((col + 1       )%L);
+         int neighbour6 = (row + 1       )%L + L * ((col - 1 + L)%L);
+         int neighbour7 = (row - 1 + L)%L + L * ((col - 1 + L)%L);
+         int neighbour8 = (row - 1 + L)%L + L * ((col + 1       )%L);
+
+         J[number*length + neighbour5] = J2;
+         J[number*length + neighbour6] = J2;
+         J[number*length + neighbour7] = J2;
+         J[number*length + neighbour8] = J2;
 
       }
-
-   }
 
    //diagonalize the couplingmatrix
    char jobz = 'V';
@@ -93,24 +109,6 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
          ++k;
 
       }
-
-   }
-
-   //The magnetic field and single-site propagator
-   this->theField = theMPO->gField();
-
-   this->isMagneticField = (abs(theField) < 1.0e-15) ? false : true;
-
-   //make the single site propagators
-   H1Prop = new complex<double> [phys_d*phys_d];
-
-   //e^Sz is diagonal in the physical site-basis
-   for(int i = 0;i < phys_d;++i){
-
-      H1Prop[i*phys_d + i] = exp(-0.5 * dtau * theField * (*Sz)(i,i));
-
-      for(int j = i + 1;j < phys_d;++j)
-         H1Prop[j*phys_d + i] = H1Prop[i*phys_d + j] = complex<double>(0.0,0.0);
 
    }
 
@@ -168,7 +166,7 @@ TrotterHeisenberg::TrotterHeisenberg(HeisenbergMPO *theMPO, const double dtau){
 
 }
 
-TrotterHeisenberg::~TrotterHeisenberg(){
+TrotterJ1J2::~TrotterJ1J2(){
 
    delete Sx;
    delete Sy;
@@ -178,8 +176,6 @@ TrotterHeisenberg::~TrotterHeisenberg(){
    delete [] Jeig;
 
    delete [] V;
-
-   delete [] H1Prop;
 
    delete [] eig;
    delete [] Sx_vec;
@@ -209,22 +205,10 @@ TrotterHeisenberg::~TrotterHeisenberg(){
 
 }
 
-bool TrotterHeisenberg::gIsMagneticField() const {
-
-   return isMagneticField; 
-
-}
-
-complex<double> TrotterHeisenberg::gField() const {
-
-   return theField; 
-
-}
-
 /**
  * @return the j'th index of the k'th eigenvector of the couplingMatrix
  */
-complex<double> TrotterHeisenberg::gJ(const int k, const int i) const {
+complex<double> TrotterJ1J2::gJ(const int k, const int i) const {
 
    return J[ k*length + i ]; 
 
@@ -233,7 +217,7 @@ complex<double> TrotterHeisenberg::gJ(const int k, const int i) const {
 /**
  * @return the j'th index of the k'th eigenvector of the transformation matrix
  */
-complex<double> TrotterHeisenberg::gV(const int k, const int i) const {
+complex<double> TrotterJ1J2::gV(const int k, const int i) const {
 
    return V[ k*length + i ]; 
 
@@ -242,7 +226,7 @@ complex<double> TrotterHeisenberg::gV(const int k, const int i) const {
 /**
  * @return the i'th eigenvalue of the couplingmatrix
  */
-double TrotterHeisenberg::gJeig( const int i) const {
+double TrotterJ1J2::gJeig( const int i) const {
 
    return Jeig[i]; 
 
@@ -251,25 +235,16 @@ double TrotterHeisenberg::gJeig( const int i) const {
 /**
  * @return the timestep
  */
-double TrotterHeisenberg::gtau() const {
+double TrotterJ1J2::gtau() const {
 
    return dtau;
 
 }
 
 /**
- * @return the propagator matrix for the H1
+ * @return the propagator matrix for the AF
  */
-complex<double> TrotterHeisenberg::gH1Prop(int i,int j) const {
-
-   return H1Prop[j*phys_d + i];
-
-}
-
-/**
- * @return the propagator matrix for the H1
- */
-complex<double> TrotterHeisenberg::gAFProp(int myID,int site,int i,int j) const {
+complex<double> TrotterJ1J2::gAFProp(int myID,int site,int i,int j) const {
 
    return AFProp[myID][site*phys_d*phys_d + j*phys_d + i];
 
@@ -281,7 +256,7 @@ complex<double> TrotterHeisenberg::gAFProp(int myID,int site,int i,int j) const 
  * @param r type of operator, x,y or z
  * @param x shifted auxiliary field variable
  */
-void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
+void TrotterJ1J2::fillAFProp(int myID,int k,int r,complex<double> x){
 
    if(r == 0){//x
 
@@ -339,7 +314,7 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,int r,complex<double> x){
  * @param k index of eigenvectors of J
  * @param x shifted auxiliary field variable
  */
-void TrotterHeisenberg::fillAFProp(int myID,int k,complex<double> x,Random *RN){
+void TrotterJ1J2::fillAFProp(int myID,int k,complex<double> x,Random *RN){
 
    const double PI = 3.14159265358979323;
 
@@ -387,7 +362,7 @@ void TrotterHeisenberg::fillAFProp(int myID,int k,complex<double> x,Random *RN){
 /**
  * @return the auxiliary field operator V associated with the k'th eigenvector of J, and operator Sr
  */
-AFMPO *TrotterHeisenberg::gV_Op(int k,int r){
+AFMPO *TrotterJ1J2::gV_Op(int k,int r){
 
    return V_Op[r*n_trot + k];
 
@@ -396,8 +371,35 @@ AFMPO *TrotterHeisenberg::gV_Op(int k,int r){
 /**
  * @return the number of trotter terms
  */
-int TrotterHeisenberg::gn_trot() const {
+int TrotterJ1J2::gn_trot() const {
 
    return n_trot;
+
+}
+
+/**
+ * @return the length of the chain
+ */
+int TrotterJ1J2::glength() const {
+
+   return length;
+
+}
+
+/**
+ * @return the J2 coupling parameter
+ */
+double TrotterJ1J2::gJ2() const {
+
+   return J2;
+
+}
+
+/**
+ * @return the J2 coupling parameter
+ */
+int TrotterJ1J2::gPhys_d() const {
+
+   return phys_d;
 
 }

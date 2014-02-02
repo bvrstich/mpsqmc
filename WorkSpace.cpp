@@ -20,9 +20,9 @@ WorkSpace::WorkSpace(int D,int DO,int d){
    work2 = new complex<double> * [num_omp_threads];
    work3 = new complex<double> * [num_omp_threads];
 
-   dim1 = D*D*DO;
-   dim2 = D*D*DO*d;
-   dim3 = D*D*DO*d;
+   dim1 = D*DO*d;
+   dim2 = D*DO*d;
+   dim3 = D*DO*d;
 
    for(int i = 0;i < num_omp_threads;++i){
 

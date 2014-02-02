@@ -12,7 +12,7 @@ using std::complex;
 #include "MPStensor.h"
 #include "MPO.h"
 #include "TwoSiteObject.h"
-#include "TrotterHeisenberg.h"
+#include "TrotterJ1J2.h"
 
 #include "WorkSpace.h"
 
@@ -93,13 +93,10 @@ class MPSstate{
       //Do H * Psi0 and store in this object
       void ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0);
       
-      //Apply the single-site Trotter term on each site
-      void ApplyH1(TrotterHeisenberg * theTrotter);
-
       //apply the auxiliary field
-      void ApplyAF(int k,int r,complex<double> x,TrotterHeisenberg * theTrotter);
+      void ApplyAF(int k,int r,complex<double> x,TrotterJ1J2 * theTrotter);
 
-      void ApplyAF(int k,complex<double> x,TrotterHeisenberg * theTrotter);
+      void ApplyAF(int k,complex<double> x,TrotterJ1J2 * theTrotter);
       
       static void InitWork(int D,int DO,int d);
       static void ClearWork();

@@ -17,13 +17,12 @@ CPPSRC	= main.cpp\
            OpI.cpp\
            Op0.cpp\
            MPO.cpp\
-           HeisenbergMPO.cpp\
            AFMPO.cpp\
            MPStensor.cpp\
            TwoSiteObject.cpp\
            MPSstate.cpp\
            Walker.cpp\
-           TrotterHeisenberg.cpp\
+           TrotterJ1J2.cpp\
            AFQMC.cpp\
            WorkSpace.cpp
 

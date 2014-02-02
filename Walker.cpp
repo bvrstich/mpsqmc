@@ -140,6 +140,15 @@ void Walker::sEL(MPSstate *HPsi0){
 }
 
 /** 
+ * set the Local Energy: overlap has to be set first!
+ */
+void Walker::sEL(complex<double> EL_in){
+
+   EL = EL_in;
+
+}
+
+/** 
  * set the v operator Energy: overlap has to be set first!
  */
 void Walker::sVL(MPSstate ** VPsi0){

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
-#include <omp.h>
+#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
 #include <vector>
 
 #include "AFQMC.h"
@@ -398,11 +398,32 @@ void AFQMC::Walk(const int steps){
  */
 double AFQMC::PropagateSeparately(){
 
+#ifdef _OPENMP
+   int num_omp_threads = omp_get_max_threads();
+#else
+   int num_omp_threads = 1;
+#endif
+
+   MPSstate ** tmp = new MPSstate * [num_omp_threads];
+
+   for(int i = 0;i < num_omp_threads;++i)
+      tmp[i] = new MPSstate(theTrotter->glength(),DT,phys_d,RN);
+
    double sum = 0.0;
+   double width = sqrt(2.0/dtau);
 
 #pragma omp parallel for reduction(+: sum)
    for(int walker=0; walker < theWalkers.size(); walker++){
 
+#ifdef _OPENMP
+   int myID = omp_get_thread_num();
+#else
+   int myID = 0;
+#endif
+
+      //backup the state
+      *(tmp[myID]) = *(theWalkers[walker]->gState());
+      
       //now loop over the auxiliary fields:
       for(int k = 0;k < n_trot;++k)
          for(int r = 0;r < 3;++r){
@@ -414,21 +435,39 @@ double AFQMC::PropagateSeparately(){
 
          }
 
-      theWalkers[walker]->sOverlap(Psi0);
+      //get the local energy
+      complex<double> tmpOverlap = theWalkers[walker]->gState()->InnerProduct(Psi0);
+      complex<double> tmpEL = theWalkers[walker]->gState()->InnerProduct(HPsi0)/tmpOverlap;
 
-      complex<double> prev_EL = theWalkers[walker]->gEL();
+      if( (std::real(tmpEL) < std::real(theWalkers[walker]->gEL()) - width) || 
+         
+            (std::real(tmpEL) > std::real(theWalkers[walker]->gEL()) + width) ){//very rare event, will cause numerical unstability
 
-      theWalkers[walker]->sEL(HPsi0);
+         cout << "Reject the move!" << endl;
 
-      complex<double> EL = theWalkers[walker]->gEL();
+         //copy the state back!
+         *(theWalkers[walker]->gState())  = *(tmp[myID]);
 
-      double scale = exp(-0.5 * dtau * std::real(EL + prev_EL));
+      }
+      else{//go on
 
-      theWalkers[walker]->multWeight(scale);
+         theWalkers[walker]->sOverlap(Psi0);
 
-      theWalkers[walker]->sVL(VPsi0);
+         complex<double> prev_EL = theWalkers[walker]->gEL();
 
-      sum += theWalkers[walker]->gWeight();
+         theWalkers[walker]->sEL(tmpEL);
+
+         complex<double> EL = theWalkers[walker]->gEL();
+
+         double scale = exp(-0.5 * dtau * std::real(EL + prev_EL));
+
+         theWalkers[walker]->multWeight(scale);
+
+         theWalkers[walker]->sVL(VPsi0);
+
+         sum += theWalkers[walker]->gWeight();
+
+      }
 
    }
 

@@ -21,7 +21,14 @@ class AFQMC{
       //Let the walkers propagate for steps steps
       void Walk(const int steps);
 
+      static void init(int,int,int,Random *);
+
+      static void clear();
+
    private:
+      
+      //!backup storage for the 'error control'
+      static MPSstate **stor;
    
       /******************************
       *** Constructor information ***

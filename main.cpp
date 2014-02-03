@@ -46,8 +46,12 @@ int main(int argc,char *argv[]){
 
    TrotterJ1J2 theTrotter(L,d,(double)0.1*J2,dtau);
 
+   AFQMC::init(L*L,DT,d,&RN);
+
    AFQMC thePopulation(&theTrotter,&RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
+
+   AFQMC::clear();
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

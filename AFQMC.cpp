@@ -13,6 +13,8 @@
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 15, 2013 */
 using namespace std;
 
+MPSstate **AFQMC::stor;
+
 /**
  * constructor of the AFQMC object, takes input parameters that define the QMC walk.
  * @param theTrotter trotter terms for the interaction
@@ -400,17 +402,6 @@ void AFQMC::Walk(const int steps){
  */
 double AFQMC::PropagateSeparately(){
 
-#ifdef _OPENMP
-   int num_omp_threads = omp_get_max_threads();
-#else
-   int num_omp_threads = 1;
-#endif
-
-   MPSstate ** tmp = new MPSstate * [num_omp_threads];
-
-   for(int i = 0;i < num_omp_threads;++i)
-      tmp[i] = new MPSstate(theTrotter->glength(),DT,phys_d,RN);
-
    double sum = 0.0;
    double width = sqrt(2.0/dtau);
 
@@ -426,7 +417,7 @@ double AFQMC::PropagateSeparately(){
 #endif
 
       //backup the state
-      *(tmp[myID]) = *(theWalkers[walker]->gState());
+      *(stor[myID]) = *(theWalkers[walker]->gState());
       
       //now loop over the auxiliary fields:
       for(int k = 0;k < n_trot;++k)
@@ -450,7 +441,7 @@ double AFQMC::PropagateSeparately(){
          num_rej++;
 
          //copy the state back!
-         *(theWalkers[walker]->gState())  = *(tmp[myID]);
+         *(theWalkers[walker]->gState())  = *(stor[myID]);
 
       }
       else{//go on
@@ -790,3 +781,33 @@ delete [] Noffset;
 
 }
 */
+
+void AFQMC::init(int length,int D,int d,Random *ran){
+
+#ifdef _OPENMP
+   int num_omp_threads = omp_get_max_threads();
+#else
+   int num_omp_threads = 1;
+#endif
+
+   stor = new MPSstate * [num_omp_threads];
+
+   for(int i = 0;i < num_omp_threads;++i)
+      stor[i] = new MPSstate(length,D,d,ran);
+
+}
+
+void AFQMC::clear(){
+
+#ifdef _OPENMP
+   int num_omp_threads = omp_get_max_threads();
+#else
+   int num_omp_threads = 1;
+#endif
+
+   for(int i = 0;i < num_omp_threads;++i)
+      delete stor[i];
+
+   delete [] stor;
+
+}

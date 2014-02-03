@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
-#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
+#include <omp.h>
 #include <vector>
 
 #include "AFQMC.h"
@@ -166,6 +166,8 @@ void AFQMC::SetupTrial(){
       sprintf(filename,"input/J1J2/%dx%d/J2=1.0/HPsi0/DT=%d.mps",L,L,DT);
    else
       sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/HPsi0/DT=%d.mps",L,L,j2,DT);
+
+   cout << filename << endl;
 
    HPsi0 = new MPSstate(filename,RN);
 
@@ -412,7 +414,9 @@ double AFQMC::PropagateSeparately(){
    double sum = 0.0;
    double width = sqrt(2.0/dtau);
 
-#pragma omp parallel for reduction(+: sum)
+   int num_rej = 0;
+
+#pragma omp parallel for reduction(+: sum,num_rej)
    for(int walker=0; walker < theWalkers.size(); walker++){
 
 #ifdef _OPENMP
@@ -443,7 +447,7 @@ double AFQMC::PropagateSeparately(){
          
             (std::real(tmpEL) > std::real(theWalkers[walker]->gEL()) + width) ){//very rare event, will cause numerical unstability
 
-         cout << "Reject the move!" << endl;
+         num_rej++;
 
          //copy the state back!
          *(theWalkers[walker]->gState())  = *(tmp[myID]);
@@ -470,6 +474,10 @@ double AFQMC::PropagateSeparately(){
       }
 
    }
+
+   cout << endl;
+   cout << "Number of rejected moves:\t" << num_rej << endl;
+   cout << endl;
 
    return sum;
 

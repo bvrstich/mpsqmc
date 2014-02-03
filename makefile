@@ -38,14 +38,14 @@ INCLUDE = ./include
 
 LIBS = -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -liomp5 -lpthread
 
-CC  = gcc
-CXX = g++
+CC  = icc
+CXX = icpc
 
 # -----------------------------------------------------------------------------
 #   Compiler & Linker flags
 # -----------------------------------------------------------------------------
-CFLAGS = -I$(INCLUDE) -O3 -flto -fopenmp
-LDFLAGS	= -O3 -flto -fopenmp
+CFLAGS = -I$(INCLUDE) -O3 -ipo -openmp
+LDFLAGS	= -O3 -ipo -openmp
 
 
 # =============================================================================

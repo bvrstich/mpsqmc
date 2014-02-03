@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <iostream>
-#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
+#include <omp.h>
 #include "TrotterJ1J2.h"
 #include "Random.h"
 #include "OpSz.h"

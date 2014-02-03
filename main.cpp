@@ -44,7 +44,7 @@ int main(int argc,char *argv[]){
    double dtau = 0.01;
    int nSteps = 100000;
 
-   TrotterJ1J2 theTrotter(L,d,J2,dtau);
+   TrotterJ1J2 theTrotter(L,d,(double)0.1*J2,dtau);
 
    AFQMC thePopulation(&theTrotter,&RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);

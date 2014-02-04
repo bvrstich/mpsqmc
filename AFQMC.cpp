@@ -23,7 +23,7 @@ MPSstate **AFQMC::stor;
  * @param Nwalkers number of Walker states
  * @param dtau time step of each evolution
  */
-AFQMC::AFQMC(TrotterJ1J2 *theTrotter,Random *RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
+AFQMC::AFQMC(J1J2MPO *theMPO,TrotterJ1J2 *theTrotter,Random *RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau){
 
    this->RN = RN;
    this->DT = Psi0_in->gDtrunc();
@@ -31,6 +31,8 @@ AFQMC::AFQMC(TrotterJ1J2 *theTrotter,Random *RN, MPSstate *Psi0_in,const int DW,
    this->dtau = dtau;
    this->phys_d = theTrotter->gPhys_d();
    this->theTrotter = theTrotter;
+   this->theMPO = theMPO;
+
    n_trot = theTrotter->gn_trot();
 
    this->totalNDesiredWalkers = Nwalkers;
@@ -128,7 +130,6 @@ AFQMC::~AFQMC(){
 
    //AFQMC::SetupTrial
    delete Psi0;
-   delete HPsi0;
 
    for(int k = 0;k < 3*n_trot;++k)
       delete VPsi0[k];
@@ -143,8 +144,6 @@ AFQMC::~AFQMC(){
    delete [] NThreadsPerRank;
    delete [] NDesiredWalkersPerRank;
    delete [] NCurrentWalkersPerRank;
-
-   MPSstate::ClearWork();
 
 }
 
@@ -163,18 +162,6 @@ void AFQMC::SetupTrial(){
    int j2 = 10*J2;
 
    char filename[100];
-
-   if(J2 == 10)
-      sprintf(filename,"input/J1J2/%dx%d/J2=1.0/HPsi0/DT=%d.mps",L,L,DT);
-   else
-      sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/HPsi0/DT=%d.mps",L,L,j2,DT);
-
-   cout << filename << endl;
-
-   HPsi0 = new MPSstate(filename,RN);
-
-   //initialize workspace
-   MPSstate::InitWork(Psi0->gDtrunc(),HPsi0->gDtrunc(),theTrotter->gPhys_d());
 
    //now Apply the hermitian conjugate of the V's times trialstate
    if(MPIrank==0){
@@ -269,7 +256,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
       theWalkers[0] = new Walker(&input,1.0,n_trot);
 
       theWalkers[0]->sOverlap(Psi0);
-      theWalkers[0]->sEL(HPsi0);
+      theWalkers[0]->sEL(theMPO,Psi0);
       theWalkers[0]->sVL(VPsi0);
 
    }
@@ -279,7 +266,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
       theWalkers[0]->gState()->normalize();
 
       theWalkers[0]->sOverlap(Psi0);
-      theWalkers[0]->sEL(HPsi0);
+      theWalkers[0]->sEL(theMPO,Psi0);
       theWalkers[0]->sVL(VPsi0);
 
    }
@@ -294,7 +281,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
          theWalkers[cnt]->gState()->normalize();
 
          theWalkers[cnt]->sOverlap(Psi0);
-         theWalkers[cnt]->sEL(HPsi0);
+         theWalkers[cnt]->sEL(theMPO,Psi0);
          theWalkers[cnt]->sVL(VPsi0);
 
       }
@@ -432,7 +419,7 @@ double AFQMC::PropagateSeparately(){
 
       //get the local energy
       complex<double> tmpOverlap = theWalkers[walker]->gState()->InnerProduct(Psi0);
-      complex<double> tmpEL = theWalkers[walker]->gState()->InnerProduct(HPsi0)/tmpOverlap;
+      complex<double> tmpEL = theWalkers[walker]->gState()->expectation(theMPO,Psi0)/tmpOverlap;
 
       if( (std::real(tmpEL) < std::real(theWalkers[walker]->gEL()) - width) || 
          

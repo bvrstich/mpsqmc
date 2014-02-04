@@ -41,8 +41,6 @@ class Walker{
 
       void sEL(MPO *theMPO,MPSstate *Psi0);
 
-      void sEL(MPSstate *HPsi0);
-
       void sEL(complex<double> );
 
       void sVL(MPSstate **VPsi0);

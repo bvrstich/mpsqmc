@@ -12,6 +12,7 @@
 #include "Walker.h"
 #include "AFQMC.h"
 #include "WorkSpace.h"
+#include "J1J2MPO.h"
 
 using namespace std;
 
@@ -23,10 +24,10 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-   int L = atoi(argv[1]); 
-   int J2 = atoi(argv[2]);
-   int DT = atoi(argv[3]);
-   int DW = atoi(argv[4]);
+   int L = 4;//atoi(argv[1]); 
+   int J2 = 0;//atoi(argv[2]);
+   int DT = 4;//atoi(argv[3]);
+   int DW = 2;//atoi(argv[4]);
    int d = 2;
 
    Random RN;
@@ -45,13 +46,20 @@ int main(int argc,char *argv[]){
    int nSteps = 100000;
 
    TrotterJ1J2 theTrotter(L,d,(double)0.1*J2,dtau);
+ 
+   J1J2MPO theMPO(L,d,(double)0.1*J2);
+
+   //initialize workspace
+   MPSstate::InitWork(DT,theMPO.gDtrunc(),d);
 
    AFQMC::init(L*L,DT,d,&RN);
 
-   AFQMC thePopulation(&theTrotter,&RN,&Psi0,DW, Nwalkers, dtau);
+   AFQMC thePopulation(&theMPO,&theTrotter,&RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
 
    AFQMC::clear();
+
+   MPSstate::ClearWork();
 
 #ifdef USE_MPI_IN_MPSQMC
    MPI::Finalize();

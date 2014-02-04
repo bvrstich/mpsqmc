@@ -4,6 +4,7 @@
 #include "MPSstate.h"
 #include "TrotterJ1J2.h"
 #include "Walker.h"
+#include "J1J2MPO.h"
 #include <vector>
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 15, 2013 */
@@ -13,7 +14,7 @@ class AFQMC{
    public:
    
       //constructor with input trialwavefunction
-      AFQMC(TrotterJ1J2 *theTrotter, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
+      AFQMC(J1J2MPO *theMPO,TrotterJ1J2 *theTrotter, Random * RN, MPSstate *Psi0_in,const int DW, const int Nwalkers, const double dtau);
       
       //Destructor
       ~AFQMC();
@@ -36,6 +37,9 @@ class AFQMC{
    
       //The Trotter decomposition of the MPO
       TrotterJ1J2 *theTrotter;
+
+      //The J1J2 MPO
+      J1J2MPO *theMPO;
 
       //number of trotter terms
       int n_trot;
@@ -90,9 +94,6 @@ class AFQMC{
       //Trial wfn (one per thread)
       MPSstate * Psi0;
 
-      //Hamiltonian times trial wfn
-      MPSstate * HPsi0;
-      
       //Auxiliary field terms (hermitian conjugate!!) times trial wfn. 
       MPSstate ** VPsi0;
 

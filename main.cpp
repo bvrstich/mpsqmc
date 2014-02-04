@@ -45,9 +45,9 @@ int main(int argc,char *argv[]){
    double dtau = 0.01;
    int nSteps = 100000;
 
-   TrotterJ1J2 theTrotter(L,d,(double)0.1*J2,dtau);
+   TrotterJ1J2 theTrotter(true,L,d,(double)0.1*J2,dtau);
  
-   J1J2MPO theMPO(L,d,(double)0.1*J2);
+   J1J2MPO theMPO(true,L,d,(double)0.1*J2);
 
    //initialize workspace
    MPSstate::InitWork(DT,theMPO.gDtrunc(),d);

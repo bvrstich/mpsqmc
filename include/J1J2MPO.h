@@ -20,7 +20,7 @@ class J1J2MPO : public MPO{
    public:
    
       //Constructor
-      J1J2MPO(const int length, const int phys_d,double J2);
+      J1J2MPO(bool,const int length, const int phys_d,double J2);
       
       //Destructor
       virtual ~J1J2MPO();

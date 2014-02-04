@@ -5,7 +5,7 @@
 
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on August 29, 2013 */
 
-J1J2MPO::J1J2MPO(int L, int phys_d,double J2) : MPO(){
+J1J2MPO::J1J2MPO(bool pbc,int L, int phys_d,double J2) : MPO(){
 
    int length = L*L;
 
@@ -30,36 +30,117 @@ J1J2MPO::J1J2MPO(int L, int phys_d,double J2) : MPO(){
       for(int j = 0;j < length;j++)
          J[j*length + i] = 0.0;
 
-   for (int row=0; row< L; row++)
-      for (int col=0; col< L; col++){
+   if(pbc){
 
-         int number = row + L * col;
+      for (int row=0; row< L; row++)
+         for (int col=0; col< L; col++){
 
-         int neighbour1 = (row + 1       )%L + L * col;
-         int neighbour2 = (row - 1 + L)%L + L * col;
-         int neighbour3 = row                   + L * ((col - 1 + L)%L);
-         int neighbour4 = row                   + L * ((col + 1       )%L);
+            int number = row + L * col;
 
-         J[number*length + neighbour1] = 1.0;
-         J[number*length + neighbour2] = 1.0;
-         J[number*length + neighbour3] = 1.0;
-         J[number*length + neighbour4] = 1.0;
+            int neighbour1 = (row + 1       )%L + L * col;
+            int neighbour2 = (row - 1 + L)%L + L * col;
+            int neighbour3 = row                   + L * ((col - 1 + L)%L);
+            int neighbour4 = row                   + L * ((col + 1       )%L);
 
-         int neighbour5 = (row + 1       )%L + L * ((col + 1       )%L);
-         int neighbour6 = (row + 1       )%L + L * ((col - 1 + L)%L);
-         int neighbour7 = (row - 1 + L)%L + L * ((col - 1 + L)%L);
-         int neighbour8 = (row - 1 + L)%L + L * ((col + 1       )%L);
+            J[number*length + neighbour1] = 1.0;
+            J[number*length + neighbour2] = 1.0;
+            J[number*length + neighbour3] = 1.0;
+            J[number*length + neighbour4] = 1.0;
 
-         J[number*length + neighbour5] = J2;
-         J[number*length + neighbour6] = J2;
-         J[number*length + neighbour7] = J2;
-         J[number*length + neighbour8] = J2;
+            int neighbour5 = (row + 1       )%L + L * ((col + 1       )%L);
+            int neighbour6 = (row + 1       )%L + L * ((col - 1 + L)%L);
+            int neighbour7 = (row - 1 + L)%L + L * ((col - 1 + L)%L);
+            int neighbour8 = (row - 1 + L)%L + L * ((col + 1       )%L);
+
+            J[number*length + neighbour5] = J2;
+            J[number*length + neighbour6] = J2;
+            J[number*length + neighbour7] = J2;
+            J[number*length + neighbour8] = J2;
+
+         }
+
+   }
+   else{
+
+    for (int row=1; row< L - 1; row++)
+         for (int col=1; col < L -1; col++){
+
+            int number = row + L * col;
+
+            int neighbour1 = row + 1 + L * col;
+            int neighbour2 = row - 1 + L * col;
+            int neighbour3 = row                   + L * ( col - 1 );
+            int neighbour4 = row                   + L * ( col + 1 );
+
+            J[number*length+neighbour1] = 1.0;
+            J[number*length+neighbour2] = 1.0;
+            J[number*length+neighbour3] = 1.0;
+            J[number*length+neighbour4] = 1.0;
+
+            J[neighbour1*length+number] = 1.0;
+            J[neighbour2*length+number] = 1.0;
+            J[neighbour3*length+number] = 1.0;
+            J[neighbour4*length+number] = 1.0;
+
+            int neighbour5 = row + 1 + L * (col + 1 );
+            int neighbour6 = row + 1 + L * (col - 1 );
+            int neighbour7 = row - 1 + L * (col - 1 );
+            int neighbour8 = row - 1 + L * (col + 1 );
+
+            J[number*length+neighbour5] = J2;
+            J[number*length+neighbour6] = J2;
+            J[number*length+neighbour7] = J2;
+            J[number*length+neighbour8] = J2;
+
+            J[neighbour5*length+number] = J2;
+            J[neighbour6*length+number] = J2;
+            J[neighbour7*length+number] = J2;
+            J[neighbour8*length+number] = J2;
+
+         }
+
+      //edges
+      for (int col=0; col < L -1; col++){
+
+         //row = 0
+         int number = L * col;
+         int neighbour = L * ( col + 1 );
+
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
+
+         //row = L - 1
+         number = L - 1 + L * col;
+         neighbour = L - 1 + L * ( col + 1 );
+
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
 
       }
+
+      for (int row=0; row < L -1; row++){
+
+         //col = 0
+         int number = row;
+         int neighbour = row + 1;
  
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
+
+         //col = L - 1
+         number = row + L * (L - 1);
+         neighbour = row + 1 + L * (L - 1);
+
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
+
+      }
+
+   }
+
    MPOdimensions = new int [length+1];
    fillMPOdimensions();
-   
+
    MPOprefactors = new complex<double> *** [length];
    MPOoperators  = new Operator *** [length];
 
@@ -88,9 +169,9 @@ J1J2MPO::~J1J2MPO(){
    delete opSz;
    delete opSx;
    delete opSy;
-   
+
    delete [] J;
-   
+
    for (int site = 0;site < length;site++){
 
       for (int row=0; row<dimL(site); row++){
@@ -107,9 +188,9 @@ J1J2MPO::~J1J2MPO(){
 
    delete [] MPOprefactors;
    delete [] MPOoperators;
-   
+
    delete [] MPOdimensions;
-   
+
 }
 
 void J1J2MPO::fillMPOdimensions(){
@@ -135,7 +216,7 @@ void J1J2MPO::fillMPOdimensions(){
 void J1J2MPO::fillMPOprefactorsMPOoperators(){
 
    int locSwitch = length/2;
-   
+
    //First and last site are pretty easy (length of min. 3 is assumed)
    MPOprefactors[0][0][0] = &MinusH;
    MPOoperators[0][0][0] = opSz;
@@ -151,7 +232,7 @@ void J1J2MPO::fillMPOprefactorsMPOoperators(){
 
    MPOprefactors[0][0][4] = &fOne;
    MPOoperators[0][0][4] = opOne;
-   
+
    MPOprefactors[length-1][0][0] = &fOne;
    MPOoperators[length-1][0][0] = opOne;
 
@@ -166,17 +247,17 @@ void J1J2MPO::fillMPOprefactorsMPOoperators(){
 
    MPOprefactors[length-1][4][0] = &MinusH;
    MPOoperators[length-1][4][0] = opSz;
-   
+
    //What is to be done before the switch site, is also well known
    for (int site=1; site<locSwitch; site++){
-   
+
       for (int row=0; row<dimL(site); row++)
          for (int col=0; col<dimR(site); col++){
 
             MPOprefactors[site][row][col] = &fZero;
             MPOoperators[site][row][col] = opZero;
-         
-      }
+
+         }
 
       for (int row=0; row<dimL(site)-1; row++){
 
@@ -214,12 +295,12 @@ void J1J2MPO::fillMPOprefactorsMPOoperators(){
          MPOoperators[site][ 1 + 3*row + 2][0] = opSz;
 
       }
-   
+
    }
-   
+
    //On the switch site, we change stored operators to complementary operators
    {
-   
+
       for (int row=0; row<dimL(locSwitch); row++)
          for (int col=0; col<dimR(locSwitch); col++){
 
@@ -279,12 +360,12 @@ void J1J2MPO::fillMPOprefactorsMPOoperators(){
 
       MPOprefactors[locSwitch][dimL(locSwitch)-1][1 + 3*(length-1-locSwitch) + 0] = &fOne;
       MPOoperators[ locSwitch][dimL(locSwitch)-1][1 + 3*(length-1-locSwitch) + 0] = opOne;
-   
+
    }
-   
+
    //After the switch site, we need to store complementary operators
    for (int site=locSwitch+1; site<length-1; site++){
-   
+
       for (int row=0; row<dimL(site); row++)
          for (int col=0; col<dimR(site); col++){
 
@@ -292,7 +373,7 @@ void J1J2MPO::fillMPOprefactorsMPOoperators(){
             MPOoperators[site][row][col] = opZero;
 
          }
-      
+
       MPOprefactors[site][0][0] = &fOne;
       MPOoperators[site][0][0] = opOne;
 
@@ -329,7 +410,7 @@ void J1J2MPO::fillMPOprefactorsMPOoperators(){
          MPOoperators[ site][dimL(site)-1][1 + 3*col + 2] = opSz;
 
       }
-   
+
    }
 
 }

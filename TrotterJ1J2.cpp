@@ -18,7 +18,7 @@ using namespace std;
  * @param J2 coupling strength
  * @param dtau timestep
  */
-TrotterJ1J2::TrotterJ1J2(int L,int d,double J2,const double dtau){
+TrotterJ1J2::TrotterJ1J2(bool pbc,int L,int d,double J2,const double dtau){
 
    this->length = L*L;
    this->phys_d = d;
@@ -36,32 +36,113 @@ TrotterJ1J2::TrotterJ1J2(int L,int d,double J2,const double dtau){
       for(int j = 0;j < length;j++)
          J[j*length + i] = 0.0;
 
-   for (int row=0; row< L; row++)
-      for (int col=0; col< L; col++){
+   if(pbc){
 
-         int number = row + L * col;
+      for (int row=0; row< L; row++)
+         for (int col=0; col< L; col++){
 
-         int neighbour1 = (row + 1       )%L + L * col;
-         int neighbour2 = (row - 1 + L)%L + L * col;
-         int neighbour3 = row                   + L * ((col - 1 + L)%L);
-         int neighbour4 = row                   + L * ((col + 1       )%L);
+            int number = row + L * col;
 
-         J[number*length + neighbour1] = 1.0;
-         J[number*length + neighbour2] = 1.0;
-         J[number*length + neighbour3] = 1.0;
-         J[number*length + neighbour4] = 1.0;
+            int neighbour1 = (row + 1       )%L + L * col;
+            int neighbour2 = (row - 1 + L)%L + L * col;
+            int neighbour3 = row                   + L * ((col - 1 + L)%L);
+            int neighbour4 = row                   + L * ((col + 1       )%L);
 
-         int neighbour5 = (row + 1       )%L + L * ((col + 1       )%L);
-         int neighbour6 = (row + 1       )%L + L * ((col - 1 + L)%L);
-         int neighbour7 = (row - 1 + L)%L + L * ((col - 1 + L)%L);
-         int neighbour8 = (row - 1 + L)%L + L * ((col + 1       )%L);
+            J[number*length + neighbour1] = 1.0;
+            J[number*length + neighbour2] = 1.0;
+            J[number*length + neighbour3] = 1.0;
+            J[number*length + neighbour4] = 1.0;
 
-         J[number*length + neighbour5] = J2;
-         J[number*length + neighbour6] = J2;
-         J[number*length + neighbour7] = J2;
-         J[number*length + neighbour8] = J2;
+            int neighbour5 = (row + 1       )%L + L * ((col + 1       )%L);
+            int neighbour6 = (row + 1       )%L + L * ((col - 1 + L)%L);
+            int neighbour7 = (row - 1 + L)%L + L * ((col - 1 + L)%L);
+            int neighbour8 = (row - 1 + L)%L + L * ((col + 1       )%L);
+
+            J[number*length + neighbour5] = J2;
+            J[number*length + neighbour6] = J2;
+            J[number*length + neighbour7] = J2;
+            J[number*length + neighbour8] = J2;
+
+         }
+
+   }
+   else{
+
+      for (int row=1; row< L - 1; row++)
+         for (int col=1; col < L -1; col++){
+
+            int number = row + L * col;
+
+            int neighbour1 = row + 1 + L * col;
+            int neighbour2 = row - 1 + L * col;
+            int neighbour3 = row                   + L * ( col - 1 );
+            int neighbour4 = row                   + L * ( col + 1 );
+
+            J[number*length+neighbour1] = 1.0;
+            J[number*length+neighbour2] = 1.0;
+            J[number*length+neighbour3] = 1.0;
+            J[number*length+neighbour4] = 1.0;
+
+            J[neighbour1*length+number] = 1.0;
+            J[neighbour2*length+number] = 1.0;
+            J[neighbour3*length+number] = 1.0;
+            J[neighbour4*length+number] = 1.0;
+
+            int neighbour5 = row + 1 + L * (col + 1 );
+            int neighbour6 = row + 1 + L * (col - 1 );
+            int neighbour7 = row - 1 + L * (col - 1 );
+            int neighbour8 = row - 1 + L * (col + 1 );
+
+            J[number*length+neighbour5] = J2;
+            J[number*length+neighbour6] = J2;
+            J[number*length+neighbour7] = J2;
+            J[number*length+neighbour8] = J2;
+
+            J[neighbour5*length+number] = J2;
+            J[neighbour6*length+number] = J2;
+            J[neighbour7*length+number] = J2;
+            J[neighbour8*length+number] = J2;
+
+         }
+
+      //edges
+      for (int col=0; col < L -1; col++){
+
+         //row = 0
+         int number = L * col;
+         int neighbour = L * ( col + 1 );
+
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
+
+         //row = L - 1
+         number = L - 1 + L * col;
+         neighbour = L - 1 + L * ( col + 1 );
+
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
 
       }
+
+      for (int row=0; row < L -1; row++){
+
+         //col = 0
+         int number = row;
+         int neighbour = row + 1;
+
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
+
+         //col = L - 1
+         number = row + L * (L - 1);
+         neighbour = row + 1 + L * (L - 1);
+
+         J[number*length+neighbour] = 1.0;
+         J[neighbour*length+number] = 1.0;
+
+      }
+
+   }
 
    //diagonalize the couplingmatrix
    char jobz = 'V';
@@ -74,7 +155,7 @@ TrotterJ1J2::TrotterJ1J2(int L,int d,double J2,const double dtau){
 
    int rlwork = 3*length - 2;
    double *rwork = new double [rlwork];
-  
+
    int info;
 
    zheev_(&jobz,&uplo,&length,J,&length,Jeig,work,&lwork,rwork,&info);

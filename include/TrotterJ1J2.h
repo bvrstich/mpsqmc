@@ -14,7 +14,7 @@ class TrotterJ1J2{
    public:
    
       //Constructor
-      TrotterJ1J2(int,int,double J2, double dtau);
+      TrotterJ1J2(bool,int,int,double J2, double dtau);
       
       //Destructor
       ~TrotterJ1J2();

@@ -22,8 +22,8 @@ CPPSRC	= main.cpp\
            TwoSiteObject.cpp\
            MPSstate.cpp\
            Walker.cpp\
-           TrotterJ1J2.cpp\
            J1J2MPO.cpp\
+           TrotterJ1J2.cpp\
            AFQMC.cpp\
            WorkSpace.cpp
 
@@ -37,16 +37,16 @@ THIS_FOLDER = .
 
 INCLUDE = ./include
 
-LIBS = -lblas -llapack
+LIBS = -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -liomp5 -lpthread
 
-CC  = clang
-CXX = clang++
+CC  = icc
+CXX = icpc
 
 # -----------------------------------------------------------------------------
 #   Compiler & Linker flags
 # -----------------------------------------------------------------------------
-CFLAGS = -g -I$(INCLUDE) -I$(INCLUDE2) -Wall 
-LDFLAGS	= -g -Wall
+CFLAGS = -I$(INCLUDE) -O3 -ipo -openmp
+LDFLAGS	= -O3 -ipo -openmp
 
 
 # =============================================================================

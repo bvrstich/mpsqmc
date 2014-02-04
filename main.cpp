@@ -24,10 +24,10 @@ int main(int argc,char *argv[]){
 
    cout.precision(15);
 
-   int L = 4;//atoi(argv[1]); 
-   int J2 = 0;//atoi(argv[2]);
-   int DT = 4;//atoi(argv[3]);
-   int DW = 2;//atoi(argv[4]);
+   int L = atoi(argv[1]); 
+   int J2 = atoi(argv[2]);
+   int DT = atoi(argv[3]);
+   int DW = atoi(argv[4]);
    int d = 2;
 
    Random RN;

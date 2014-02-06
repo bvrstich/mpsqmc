@@ -220,17 +220,7 @@ TrotterJ1J2::TrotterJ1J2(bool pbc,int L,int d,double J2,const double dtau){
    delete [] work;
    delete [] rwork;
 
-   //Find the maximum number of threads for this process
-#ifdef _OPENMP
-   const int myNOMPthreads = omp_get_max_threads();
-#else
-   const int myNOMPthreads = 1;
-#endif
-
-   AFProp = new complex<double> * [myNOMPthreads];
-
-   for(int thr = 0;thr < myNOMPthreads;++thr)
-      AFProp[thr] = new complex<double> [length * phys_d * phys_d];
+   AFProp = new complex<double> [length * phys_d * phys_d];
 
    //finally construct the auxiliary field operators as MPO's:
    V_Op = new AFMPO * [3*n_trot];
@@ -239,10 +229,7 @@ TrotterJ1J2::TrotterJ1J2(bool pbc,int L,int d,double J2,const double dtau){
       for(int k = 0;k < n_trot;++k)
          V_Op[r*n_trot + k] = new AFMPO(length,phys_d,r,V + k*length);
 
-   Sv = new complex<double> * [myNOMPthreads];
-
-   for(int thr = 0;thr < myNOMPthreads;++thr)
-      Sv[thr] = new complex<double> [phys_d * phys_d];
+   Sv = new complex<double> [phys_d * phys_d];
 
 }
 
@@ -260,19 +247,6 @@ TrotterJ1J2::~TrotterJ1J2(){
    delete [] eig;
    delete [] Sx_vec;
    delete [] Sy_vec;
-
-#ifdef _OPENMP
-   const int myNOMPthreads = omp_get_max_threads();
-#else
-   const int myNOMPthreads = 1;
-#endif
-
-   for(int thr = 0;thr < myNOMPthreads;++thr){
-
-      delete [] AFProp[thr];
-      delete [] Sv[thr];
-
-   }
 
    delete [] AFProp;
    delete [] Sv;
@@ -324,9 +298,9 @@ double TrotterJ1J2::gtau() const {
 /**
  * @return the propagator matrix for the AF
  */
-complex<double> TrotterJ1J2::gAFProp(int myID,int site,int i,int j) const {
+complex<double> TrotterJ1J2::gAFProp(int site,int i,int j) const {
 
-   return AFProp[myID][site*phys_d*phys_d + j*phys_d + i];
+   return AFProp[site*phys_d*phys_d + j*phys_d + i];
 
 }
 
@@ -336,7 +310,7 @@ complex<double> TrotterJ1J2::gAFProp(int myID,int site,int i,int j) const {
  * @param r type of operator, x,y or z
  * @param x shifted auxiliary field variable
  */
-void TrotterJ1J2::fillAFProp(int myID,int k,int r,complex<double> x){
+void TrotterJ1J2::fillAFProp(int k,int r,complex<double> x){
 
    if(r == 0){//x
 
@@ -345,10 +319,10 @@ void TrotterJ1J2::fillAFProp(int myID,int k,int r,complex<double> x){
          for(int i = 0;i < phys_d;++i)
             for(int j = 0;j < phys_d;++j){
 
-               AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
+               AFProp[site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
                for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
-                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(  x * V[k*length + site] * eig[l] ) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
+                  AFProp[site*phys_d*phys_d + j*phys_d + i] += exp(  x * V[k*length + site] * eig[l] ) * Sx_vec[l*phys_d + i] * std::conj(Sx_vec[l*phys_d + j]);
 
             }
 
@@ -362,10 +336,10 @@ void TrotterJ1J2::fillAFProp(int myID,int k,int r,complex<double> x){
          for(int i = 0;i < phys_d;++i)
             for(int j = 0;j < phys_d;++j){
 
-               AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
+               AFProp[site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
                for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sy--> l
-                  AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp( x * V[k*length + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
+                  AFProp[site*phys_d*phys_d + j*phys_d + i] += exp( x * V[k*length + site] * eig[l]) * Sy_vec[l*phys_d + i] * std::conj(Sy_vec[l*phys_d + j]);
 
             }
 
@@ -378,10 +352,10 @@ void TrotterJ1J2::fillAFProp(int myID,int k,int r,complex<double> x){
       for(int site = 0;site < length;++site)
          for(int i = 0;i < phys_d;++i){
 
-            AFProp[myID][site*phys_d*phys_d + i*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,i) );
+            AFProp[site*phys_d*phys_d + i*phys_d + i] = exp(x * V[k*length + site] * (*Sz)(i,i) );
 
             for(int j = i + 1;j < phys_d;++j)
-               AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = AFProp[myID][site*phys_d*phys_d + i*phys_d + j] = complex<double>(0.0,0.0);
+               AFProp[site*phys_d*phys_d + j*phys_d + i] = AFProp[site*phys_d*phys_d + i*phys_d + j] = complex<double>(0.0,0.0);
 
          }
 
@@ -394,7 +368,7 @@ void TrotterJ1J2::fillAFProp(int myID,int k,int r,complex<double> x){
  * @param k index of eigenvectors of J
  * @param x shifted auxiliary field variable
  */
-void TrotterJ1J2::fillAFProp(int myID,int k,complex<double> x,Random *RN){
+void TrotterJ1J2::fillAFProp(int k,complex<double> x,Random *RN){
 
    const double PI = 3.14159265358979323;
 
@@ -404,7 +378,7 @@ void TrotterJ1J2::fillAFProp(int myID,int k,complex<double> x,Random *RN){
 
    for(int i = 0;i < phys_d;++i)
       for(int j = 0;j < phys_d;++j)
-         Sv[myID][phys_d*j + i] = cos(phi)*sin(theta) * (*Sx)(i,j) + sin(phi)*sin(theta) * (*Sy)(i,j) + cos(theta) * (*Sz)(i,j);
+         Sv[phys_d*j + i] = cos(phi)*sin(theta) * (*Sx)(i,j) + sin(phi)*sin(theta) * (*Sy)(i,j) + cos(theta) * (*Sz)(i,j);
 
    //diagonalize the couplingmatrix
    char jobz = 'V';
@@ -418,17 +392,17 @@ void TrotterJ1J2::fillAFProp(int myID,int k,complex<double> x,Random *RN){
 
    int info;
 
-   zheev_(&jobz,&uplo,&phys_d,Sv[myID],&phys_d,eig,work,&lwork,rwork,&info);
+   zheev_(&jobz,&uplo,&phys_d,Sv,&phys_d,eig,work,&lwork,rwork,&info);
 
    for(int site = 0;site < length;++site){
 
       for(int i = 0;i < phys_d;++i)
          for(int j = 0;j < phys_d;++j){
 
-            AFProp[myID][site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
+            AFProp[site*phys_d*phys_d + j*phys_d + i] = complex<double>(0.0,0.0);
 
             for(int l = 0;l < phys_d;++l)//loop over eigenvector of Sx--> l
-               AFProp[myID][site*phys_d*phys_d + j*phys_d + i] += exp(  x * V[k*n_trot + site] * eig[l] ) * Sv[myID][l*phys_d + i] * std::conj(Sv[myID][l*phys_d + j]);
+               AFProp[site*phys_d*phys_d + j*phys_d + i] += exp(  x * V[k*n_trot + site] * eig[l] ) * Sv[l*phys_d + i] * std::conj(Sv[l*phys_d + j]);
 
          }
 

@@ -28,11 +28,11 @@ class TrotterJ1J2{
 
       double gJeig(const int i) const;
       
-      complex<double> gAFProp(int myID,int site,const int i, const int j) const;
+      complex<double> gAFProp(int site,const int i, const int j) const;
 
-      void fillAFProp(int myID,int k,int r,complex<double> x);
+      void fillAFProp(int k,int r,complex<double> x);
 
-      void fillAFProp(int myID,int k,complex<double> x,Random *);
+      void fillAFProp(int k,complex<double> x,Random *);
 
       AFMPO *gV_Op(int k,int r);
 
@@ -79,10 +79,10 @@ class TrotterJ1J2{
       double *eig;
 
       //!the auxiliary-field propagators
-      complex<double> **AFProp;
+      complex<double> *AFProp;
 
       //!random direction operator
-      complex<double> **Sv;
+      complex<double> *Sv;
       
       double *Jeig;
       

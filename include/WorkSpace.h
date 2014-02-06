@@ -18,16 +18,13 @@ class WorkSpace{
       //Destructor
       virtual ~WorkSpace();
 
-      void clean(int rank);
+      void clean();
 
-      complex<double> **work1;
-      complex<double> **work2;
-      complex<double> **work3;
+      complex<double> *work1;
+      complex<double> *work2;
+      complex<double> *work3;
 
    private:
-   
-      //Number of OpenMP threads
-      int num_omp_threads;
  
       int dim1;
       int dim2;

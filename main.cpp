@@ -13,7 +13,6 @@
 #include "AFQMC.h"
 #include "WorkSpace.h"
 #include "J1J2MPO.h"
-#include "HamMPO.h"
 
 using namespace std;
 
@@ -44,7 +43,7 @@ int main(int argc,char *argv[]){
 
    int Nwalkers = 1000;
    double dtau = 0.01;
-   int nSteps = 100000;
+   int nSteps = 1;
 
    TrotterJ1J2 theTrotter(true,L,d,(double)0.1*J2,dtau);
  
@@ -53,12 +52,8 @@ int main(int argc,char *argv[]){
    //initialize workspace
    MPSstate::InitWork(DT,theMPO.gDtrunc(),d);
 
-   AFQMC::init(L*L,DT,d,&RN);
-
    AFQMC thePopulation(&theMPO,&theTrotter,&RN,&Psi0,DW, Nwalkers, dtau);
    thePopulation.Walk(nSteps);
-
-   AFQMC::clear();
 
    MPSstate::ClearWork();
 

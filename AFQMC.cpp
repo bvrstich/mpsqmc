@@ -13,8 +13,6 @@
 /*  Written by Sebastian Wouters <sebastianwouters@gmail.com> on October 15, 2013 */
 using namespace std;
 
-MPSstate **AFQMC::stor;
-
 /**
  * constructor of the AFQMC object, takes input parameters that define the QMC walk.
  * @param theTrotter trotter terms for the interaction
@@ -47,8 +45,6 @@ AFQMC::AFQMC(J1J2MPO *theMPO,TrotterJ1J2 *theTrotter,Random *RN, MPSstate *Psi0_
 
    Psi0 = new MPSstate(Psi0_in);
 
-   SetupTrial();
-
 #ifdef USE_MPI_IN_MPSQMC
    MPI::COMM_WORLD.Barrier();
 #endif
@@ -71,19 +67,6 @@ void AFQMC::SetupOMPandMPILoadDistribution(){
    MPIsize = MPI::COMM_WORLD.Get_size();
    MPIrank = MPI::COMM_WORLD.Get_rank();
 
-   //Finding out how many threads are running for each process, as well as the total amount
-   NThreadsPerRank          = new int [MPIsize];
-   NThreadsPerRank[MPIrank] = myNOMPthreads;
-
-   int totalNOMPthreads = 0;
-
-   for (int count=0; count<MPIsize; count++){
-
-      MPI::COMM_WORLD.Bcast(NThreadsPerRank + count, 1, MPI::INT, count);
-      totalNOMPthreads += NThreadsPerRank[count];
-
-   }
-
    //Distribute the workload according to the threads
    NDesiredWalkersPerRank = new int[MPIsize];
 
@@ -91,7 +74,7 @@ void AFQMC::SetupOMPandMPILoadDistribution(){
 
    for(int count=0; count<MPIsize; count++){
 
-      NDesiredWalkersPerRank[count] = (int)(((double) totalNDesiredWalkers * NThreadsPerRank[count]) / totalNOMPthreads);
+      NDesiredWalkersPerRank[count] = (int)(((double) totalNDesiredWalkers ) / (double) MPIsize);
       remainder -= NDesiredWalkersPerRank[count];
 
    }
@@ -99,29 +82,21 @@ void AFQMC::SetupOMPandMPILoadDistribution(){
    for (int count=0; count<remainder; count++)
       NDesiredWalkersPerRank[count] += 1;
 
-   NCurrentWalkersPerRank = new int[MPIsize];
-
-   for (int count=0; count<MPIsize; count++)
-      NCurrentWalkersPerRank[count] = NDesiredWalkersPerRank[count];
-
    if(MPIrank==0){
 
       cout << "There are " << MPIsize << " MPI processes." << endl;
 
       for (int cnt=0; cnt<MPIsize; cnt++)
-         cout << "   MPI rank " << cnt << " has " << NThreadsPerRank[cnt] << " threads and carries " << NDesiredWalkersPerRank[cnt] << " walkers." << endl;
+         cout << "   MPI rank " << cnt << " carries " << NDesiredWalkersPerRank[cnt] << " walkers." << endl;
       
    }
 
 #else
    MPIsize = 1;
    MPIrank = 0;
-   NThreadsPerRank                 = new int[MPIsize];
    NDesiredWalkersPerRank          = new int[MPIsize];
    NCurrentWalkersPerRank          = new int[MPIsize];
-   NThreadsPerRank[MPIrank]        = myNOMPthreads;
    NDesiredWalkersPerRank[MPIrank] = totalNDesiredWalkers;
-   NCurrentWalkersPerRank[MPIrank] = NDesiredWalkersPerRank[MPIrank];
 #endif
 
 }
@@ -136,64 +111,7 @@ AFQMC::~AFQMC(){
       delete theWalkers[cnt];
 
    //AFQMC::SetupOMPandMPILoadDistribution
-   delete [] NThreadsPerRank;
    delete [] NDesiredWalkersPerRank;
-   delete [] NCurrentWalkersPerRank;
-
-}
-
-/**
- * construct the trial wavefunction
- */
-void AFQMC::SetupTrial(){
-
-#ifdef USE_MPI_IN_MPSQMC
-   Psi0 = BroadcastCopyConstruct(Psi0);
-#endif
-
-}
-
-/** 
- * different function
- */
-MPSstate * AFQMC::BroadcastCopyConstruct(MPSstate * pointer){
-
-#ifdef USE_MPI_IN_MPSQMC
-   //Make the Psi storage exactly the same as rank 0 Psi storage
-   int dim = theMPO->glength()+1;
-   int * VirtualDims = new int[dim];
-   int truncDim = 0;
-
-   if (MPIrank==0){
-
-      for(int cnt = 0;cnt < dim;cnt++)
-         VirtualDims[cnt] = pointer->gDimAtBound(cnt);
-
-      truncDim = pointer->gDtrunc();
-
-   }
-
-   MPI::COMM_WORLD.Bcast(VirtualDims, dim, MPI::INT, 0);
-   MPI::COMM_WORLD.Bcast(&truncDim, 1, MPI::INT, 0);
-
-   if(MPIrank>0)
-      pointer = new MPSstate(theMPO->glength(), truncDim, theMPO->gPhys_d(), VirtualDims, RN);
-
-   delete [] VirtualDims;
-
-   //Broadcast the Psi storage from rank 0
-   for (int site=0; site<theMPO->glength(); site++){
-
-      int dim = pointer->gDimAtBound(site) * pointer->gDimAtBound(site+1) * pointer->gPhys_d();
-
-      double * storage = pointer->gMPStensor(site)->gStorage();
-
-      MPI::COMM_WORLD.Bcast(storage, dim, MPI::DOUBLE, 0);
-
-   }
-#endif
-
-   return pointer;
 
 }
 
@@ -202,7 +120,7 @@ MPSstate * AFQMC::BroadcastCopyConstruct(MPSstate * pointer){
  */
 void AFQMC::SetupWalkers(bool copyTrial){
 
-   theWalkers.resize(NCurrentWalkersPerRank[MPIrank]);
+   theWalkers.resize(NDesiredWalkersPerRank[MPIrank]);
 
    if(copyTrial){
 
@@ -219,6 +137,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
          sprintf(filename,"/home/bright/bestanden/programmas/dmrg/J1J2/%dx%d/J2=0.%d/PsiW/DT=%d.mps",L,L,j2,DT);
 
       MPSstate input(filename,RN);
+      stor = new MPSstate(filename,RN);
 
       theWalkers[0] = new Walker(&input,1.0,n_trot);
 
@@ -289,13 +208,15 @@ void AFQMC::Walk(const int steps){
 
       //Propagate the walkers of each rank separately --> no MPI in that function
       double wsum = PropagateSeparately();
-
+/*
       //Form the total sum of the walker weights and calculate the scaling for population control
 #ifdef USE_MPI_IN_MPSQMC
       MPI::COMM_WORLD.Barrier();
 
       double twsum = 0.0;
+
       MPI::COMM_WORLD.Allreduce(&wsum, &twsum, 1, MPI::DOUBLE, MPI::SUM);
+
       double avgw = twsum /(double) theWalkers.size();
 #else
       double avgw = wsum / (double)theWalkers.size();
@@ -346,7 +267,7 @@ void AFQMC::Walk(const int steps){
 #ifdef USE_MPI_IN_MPSQMC
       PopulationBalancing();
 #endif
-
+*/
    }
 
 }
@@ -364,15 +285,8 @@ double AFQMC::PropagateSeparately(){
 #pragma omp parallel for reduction(+: sum,num_rej)
    for(int walker=0; walker < theWalkers.size(); walker++){
 
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-
       //backup the state
-      *(stor[myID]) = *(theWalkers[walker]->gState());
-      
+     /* 
       //now loop over the auxiliary fields:
       for(int k = 0;k < n_trot;++k)
          for(int r = 0;r < 3;++r){
@@ -417,7 +331,7 @@ double AFQMC::PropagateSeparately(){
          sum += theWalkers[walker]->gWeight();
 
       }
-
+*/
    }
 
    cout << endl;
@@ -494,73 +408,73 @@ void AFQMC::SeparatePopulationControl(const double scaling){
 
    cout << "The min. encountered weight on rank " << MPIrank << " is " << minw << " ." << endl;
    cout << "The max. encountered weight on rank " << MPIrank << " is " << maxw << " ." << endl;
-
-#ifdef USE_MPI_IN_MPSQMC
-   totalNCurrentWalkers = 0;
-   MPI::COMM_WORLD.Allreduce(NCurrentWalkersPerRank + MPIrank, &totalNCurrentWalkers, 1, MPI::INT, MPI::SUM);
-#endif
-
-   }
-
-   complex<double> AFQMC::gEP(){
-
-      complex<double> projE_num = 0.0;
-      complex<double> projE_den = 0.0;
-
-      for(int walker = 0;walker < theWalkers.size();walker++){
-
-         const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
-
-         //For the projected energy
-         projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;// * theWalkers[walker]->gOverlap();
-         projE_den += theWalkers[walker]->gWeight();// * theWalkers[walker]->gOverlap();
-
-      }
-
-      complex<double> EP = 0.0;
-
-#ifdef USE_MPI_IN_MPSQMC
-      //For the projected energy
-      double totalNum = 0.0;
-      double totalDen = 0.0;
-
-      MPI::COMM_WORLD.Allreduce(&projE_num, &totalNum, 1, MPI::DOUBLE, MPI::SUM);
-      MPI::COMM_WORLD.Allreduce(&projE_den, &totalDen, 1, MPI::DOUBLE, MPI::SUM);
-
-      EP = totalE_num / totalE_den;
-#else
-      EP = projE_num / projE_den;
-#endif
-
-      return EP;
-
-   }
-
-
-   void AFQMC::write(const int step,const int nwalkers,const double EP, const double ET){
-
-      char filename[100];
-
-      int L = sqrt(theTrotter->glength());
-      double J2 = theTrotter->gJ2();
-
-      int j2 = 10*J2;
-
-      if(j2 == 10)
-         sprintf(filename,"output/J1J2/%dx%d/J2=1.0/DT%dDW%d.txt",L,L,DT,DW);
-      else
-         sprintf(filename,"output/J1J2/%dx%d/J2=0.%d/DT%dDW%d.txt",L,L,j2,DT,DW);
-
-      ofstream output(filename,ios::app);
-      output.precision(10);
-      output << step << "\t\t" << nwalkers << "\t" << EP << "\t\t" << ET << endl;
-      output.close();
-
-   }
-
    /*
-      void AFQMC::BubbleSort(double * values, int * order, const int length){
+#ifdef USE_MPI_IN_MPSQMC
+totalNCurrentWalkers = 0;
+MPI::COMM_WORLD.Allreduce(NCurrentWalkersPerRank + MPIrank, &totalNCurrentWalkers, 1, MPI::INT, MPI::SUM);
+#endif
+    */
 
+}
+
+complex<double> AFQMC::gEP(){
+
+   complex<double> projE_num = 0.0;
+   complex<double> projE_den = 0.0;
+
+   for(int walker = 0;walker < theWalkers.size();walker++){
+
+      const complex<double> walkerEnergy = theWalkers[walker]->gEL(); // <Psi_T | H | walk > / <Psi_T | walk >
+
+      //For the projected energy
+      projE_num   += theWalkers[walker]->gWeight() * walkerEnergy;
+      projE_den += theWalkers[walker]->gWeight();
+
+   }
+
+   complex<double> EP = 0.0;
+
+#ifdef USE_MPI_IN_MPSQMC
+   //For the projected energy
+   complex<double> totalNum = 0.0;
+   complex<double> totalDen = 0.0;
+
+   MPI::COMM_WORLD.Allreduce(&projE_num, &totalNum, 1, MPI::DOUBLE_COMPLEX, MPI::SUM);
+   MPI::COMM_WORLD.Allreduce(&projE_den, &totalDen, 1, MPI::DOUBLE_COMPLEX, MPI::SUM);
+
+   EP = totalNum / totalDen;
+#else
+   EP = projE_num / projE_den;
+#endif
+
+   return EP;
+
+}
+
+
+void AFQMC::write(const int step,const int nwalkers,const double EP, const double ET){
+
+   char filename[100];
+
+   int L = sqrt(theTrotter->glength());
+   double J2 = theTrotter->gJ2();
+
+   int j2 = 10*J2;
+
+   if(j2 == 10)
+      sprintf(filename,"output/J1J2/%dx%d/J2=1.0/DT%dDW%d.txt",L,L,DT,DW);
+   else
+      sprintf(filename,"output/J1J2/%dx%d/J2=0.%d/DT%dDW%d.txt",L,L,j2,DT,DW);
+
+   ofstream output(filename,ios::app);
+   output.precision(10);
+   output << step << "\t\t" << nwalkers << "\t" << EP << "\t\t" << ET << endl;
+   output.close();
+
+}
+
+void AFQMC::BubbleSort(double * values, int * order, const int length){
+   /*
       for (int cnt=0; cnt<length; cnt++){ order[cnt] = cnt; }
       bool allOK = false;
       while (!allOK){
@@ -574,11 +488,11 @@ void AFQMC::SeparatePopulationControl(const double scaling){
       }
       }
       } // Now for all index: values[ order[index] ] >= values[ order[index+1] ]
+    */
+}
 
-      }
-
-      void AFQMC::PopulationBalancing(){
-
+void AFQMC::PopulationBalancing(){
+   /*
 #ifdef USE_MPI_IN_MPSQMC
 const bool debuginfoprint = true;
 const double threshold_start = 0.1;
@@ -589,53 +503,53 @@ double * Noffset = new double[MPIsize];
 bool oneFracDeviating = false;
 const double fractionScaling = ((double) totalNCurrentWalkers) / totalNDesiredWalkers; //We proportionally want to distribute the total load
 
-//send and recieve to syncronize NCurrentWalkersPerRank!
-if(MPIrank > 0)
-MPI_Send(&NCurrentWalkersPerRank[MPIrank],1,MPI_INT,0,MPIrank,MPI_COMM_WORLD);
+   //send and recieve to syncronize NCurrentWalkersPerRank!
+   if(MPIrank > 0)
+   MPI_Send(&NCurrentWalkersPerRank[MPIrank],1,MPI_INT,0,MPIrank,MPI_COMM_WORLD);
 
-MPI::COMM_WORLD.Barrier();
+   MPI::COMM_WORLD.Barrier();
 
-//receive
-if(MPIrank == 0)
-for(int rank = 1;rank < MPIsize;++rank)
-MPI_Recv(&NCurrentWalkersPerRank[rank],1,MPI_INT,rank,rank,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+   //receive
+   if(MPIrank == 0)
+   for(int rank = 1;rank < MPIsize;++rank)
+   MPI_Recv(&NCurrentWalkersPerRank[rank],1,MPI_INT,rank,rank,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 
-//broadcast to other ranks:
-MPI_Bcast(NCurrentWalkersPerRank,MPIsize,MPI_INT,0,MPI_COMM_WORLD);
+   //broadcast to other ranks:
+   MPI_Bcast(NCurrentWalkersPerRank,MPIsize,MPI_INT,0,MPI_COMM_WORLD);
 
-for (int count = 0;count < MPIsize;count++){
+   for (int count = 0;count < MPIsize;count++){
 
-Noffset[count] = NCurrentWalkersPerRank[count] - NDesiredWalkersPerRank[count] * fractionScaling; //So we calculate the offset from "equilibrium"
-double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
+   Noffset[count] = NCurrentWalkersPerRank[count] - NDesiredWalkersPerRank[count] * fractionScaling; //So we calculate the offset from "equilibrium"
+   double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
 
-if(frac > threshold_start) 
-oneFracDeviating = true; //if one or more offsets are too large: redistribute       
+   if(frac > threshold_start) 
+   oneFracDeviating = true; //if one or more offsets are too large: redistribute       
 
-}
+   }
 
-if ((debuginfoprint) && (MPIrank==0)){
+   if ((debuginfoprint) && (MPIrank==0)){
 
-for (int cnt=0; cnt<MPIsize; cnt++)
-cout << "MPSQMC::PopulationBalancing -> Nwalkers(" << cnt << ") = " << NCurrentWalkersPerRank[cnt] << " and Noffset(" << cnt << ") = " << Noffset[cnt] << endl;
+   for (int cnt=0; cnt<MPIsize; cnt++)
+   cout << "MPSQMC::PopulationBalancing -> Nwalkers(" << cnt << ") = " << NCurrentWalkersPerRank[cnt] << " and Noffset(" << cnt << ") = " << Noffset[cnt] << endl;
 
-}
+   }
 
-if(oneFracDeviating){
+   if(oneFracDeviating){
 
-if(debuginfoprint){
+   if(debuginfoprint){
 
-double projectedEnergy = 0.0;
-EnergyFunctionAndHistory(1, &projectedEnergy, false);
+   double projectedEnergy = 0.0;
+   EnergyFunctionAndHistory(1, &projectedEnergy, false);
 
-if (MPIrank==0)
-cout << "MPSQMC::PopulationBalancing -> As a check: projected E before = " << projectedEnergy << endl;
+   if (MPIrank==0)
+   cout << "MPSQMC::PopulationBalancing -> As a check: projected E before = " << projectedEnergy << endl;
 
-}
+   }
 
-int * work = new int[MPIsize];
-int communication_round = 0;
+   int * work = new int[MPIsize];
+   int communication_round = 0;
 
-while (oneFracDeviating){
+   while (oneFracDeviating){
 
    communication_round++;
 
@@ -645,77 +559,77 @@ while (oneFracDeviating){
    //Communicate walkers between rank work[comm] and rank work[MPIsize - 1 - comm] until "drained"
    for (int comm=0; comm< ((clusterhasinfiniband) ? MPIsize/2 : 1); comm++){
 
-      const int sender = work[comm];
-      const int receiver = work[MPIsize - 1 - comm];
+   const int sender = work[comm];
+   const int receiver = work[MPIsize - 1 - comm];
 
-      if ((Noffset[sender] > 0.0) && (Noffset[receiver] < 0.0)){
+   if ((Noffset[sender] > 0.0) && (Noffset[receiver] < 0.0)){
 
-         int amount = (int) min(Noffset[sender], -Noffset[receiver]); //This explains the "until drained" statement.
-         if (amount>0){
+int amount = (int) min(Noffset[sender], -Noffset[receiver]); //This explains the "until drained" statement.
+if (amount>0){
 
-            if ((debuginfoprint) && (MPIrank==0)){
-               cout << "MPSQMC::PopulationBalancing -> Moving " << amount << " walkers from rank " << sender << " to rank " << receiver << " during communication round " << communication_round << "." << endl;
-            }
-
-            if (MPIrank == sender){
-               for (int counter=0; counter<amount; counter++){
-                  double Weight = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gWeight();
-                  double Overlap = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gOverlap();
-                  double Ehistory = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gEnergyHistory();
-                  MPI::COMM_WORLD.Send(&Weight, 1, MPI::DOUBLE, receiver, 0);
-                  MPI::COMM_WORLD.Send(&Overlap, 1, MPI::DOUBLE, receiver, 0);
-                  MPI::COMM_WORLD.Send(&Ehistory, 1, MPI::DOUBLE, receiver, 0);
-                  for (int site=0; site<theMPO->gLength(); site++){
-                     int dim = Psi0[0]->gPhys_d() * Psi0[0]->gDimAtBound(site) * Psi0[0]->gDimAtBound(site+1);
-                     double * SendStorage = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gState()->gMPStensor(site)->gStorage();
-                     MPI::COMM_WORLD.Send(SendStorage, dim, MPI::DOUBLE, receiver, 0);
-                  }
-                  delete theWalkers[NCurrentWalkersPerRank[MPIrank]-1];
-                  NCurrentWalkersPerRank[MPIrank]  -= 1;
-                  NCurrentWalkersPerRank[receiver] += 1;
-               }
-            }
-
-            if (MPIrank == receiver){
-               for (int counter=0; counter<amount; counter++){
-                  double Weight = 0.0;
-                  double Overlap = 0.0;
-                  double Ehistory = 0.0;
-                  MPI::Status status;
-                  MPI::COMM_WORLD.Recv(&Weight, 1, MPI::DOUBLE, sender, 0, status);
-                  MPI::COMM_WORLD.Recv(&Overlap, 1, MPI::DOUBLE, sender, 0, status);
-                  MPI::COMM_WORLD.Recv(&Ehistory, 1, MPI::DOUBLE, sender, 0, status);
-                  theWalkers[NCurrentWalkersPerRank[MPIrank]] = new Walker(Psi0[0], Overlap, Weight, Ehistory);
-                  for (int site=0; site<theMPO->gLength(); site++){
-                     int dim = Psi0[0]->gPhys_d() * Psi0[0]->gDimAtBound(site) * Psi0[0]->gDimAtBound(site+1);
-                     double * RecvStorage = theWalkers[NCurrentWalkersPerRank[MPIrank]]->gState()->gMPStensor(site)->gStorage();
-                     MPI::COMM_WORLD.Recv(RecvStorage, dim, MPI::DOUBLE, sender, 0, status);
-                  }
-                  NCurrentWalkersPerRank[MPIrank] += 1;
-                  NCurrentWalkersPerRank[sender]  -= 1;
-               }
-            }
-
-            if ((MPIrank != sender) && (MPIrank != receiver)){
-               NCurrentWalkersPerRank[sender]   -= amount;
-               NCurrentWalkersPerRank[receiver] += amount;
-            }
-
-         }
-
-      }
-
-   } //Everything got communicated in parallel
-
-   MPI::COMM_WORLD.Barrier();
-
-   //Determine the offsets again : now with threshold_stop!!!!
-   oneFracDeviating = false;
-   for (int count=0; count<MPIsize; count++){
-      Noffset[count] = NCurrentWalkersPerRank[count] - NDesiredWalkersPerRank[count] * fractionScaling;
-      double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling );
-      if (frac > threshold_stop){ oneFracDeviating = true; }
+   if ((debuginfoprint) && (MPIrank==0)){
+      cout << "MPSQMC::PopulationBalancing -> Moving " << amount << " walkers from rank " << sender << " to rank " << receiver << " during communication round " << communication_round << "." << endl;
    }
+
+   if (MPIrank == sender){
+      for (int counter=0; counter<amount; counter++){
+         double Weight = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gWeight();
+         double Overlap = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gOverlap();
+         double Ehistory = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gEnergyHistory();
+         MPI::COMM_WORLD.Send(&Weight, 1, MPI::DOUBLE, receiver, 0);
+         MPI::COMM_WORLD.Send(&Overlap, 1, MPI::DOUBLE, receiver, 0);
+         MPI::COMM_WORLD.Send(&Ehistory, 1, MPI::DOUBLE, receiver, 0);
+         for (int site=0; site<theMPO->gLength(); site++){
+            int dim = Psi0[0]->gPhys_d() * Psi0[0]->gDimAtBound(site) * Psi0[0]->gDimAtBound(site+1);
+            double * SendStorage = theWalkers[NCurrentWalkersPerRank[MPIrank]-1]->gState()->gMPStensor(site)->gStorage();
+            MPI::COMM_WORLD.Send(SendStorage, dim, MPI::DOUBLE, receiver, 0);
+         }
+         delete theWalkers[NCurrentWalkersPerRank[MPIrank]-1];
+         NCurrentWalkersPerRank[MPIrank]  -= 1;
+         NCurrentWalkersPerRank[receiver] += 1;
+      }
+   }
+
+   if (MPIrank == receiver){
+      for (int counter=0; counter<amount; counter++){
+         double Weight = 0.0;
+         double Overlap = 0.0;
+         double Ehistory = 0.0;
+         MPI::Status status;
+         MPI::COMM_WORLD.Recv(&Weight, 1, MPI::DOUBLE, sender, 0, status);
+         MPI::COMM_WORLD.Recv(&Overlap, 1, MPI::DOUBLE, sender, 0, status);
+         MPI::COMM_WORLD.Recv(&Ehistory, 1, MPI::DOUBLE, sender, 0, status);
+         theWalkers[NCurrentWalkersPerRank[MPIrank]] = new Walker(Psi0[0], Overlap, Weight, Ehistory);
+         for (int site=0; site<theMPO->gLength(); site++){
+            int dim = Psi0[0]->gPhys_d() * Psi0[0]->gDimAtBound(site) * Psi0[0]->gDimAtBound(site+1);
+            double * RecvStorage = theWalkers[NCurrentWalkersPerRank[MPIrank]]->gState()->gMPStensor(site)->gStorage();
+            MPI::COMM_WORLD.Recv(RecvStorage, dim, MPI::DOUBLE, sender, 0, status);
+         }
+         NCurrentWalkersPerRank[MPIrank] += 1;
+         NCurrentWalkersPerRank[sender]  -= 1;
+      }
+   }
+
+   if ((MPIrank != sender) && (MPIrank != receiver)){
+      NCurrentWalkersPerRank[sender]   -= amount;
+      NCurrentWalkersPerRank[receiver] += amount;
+   }
+
+}
+
+}
+
+} //Everything got communicated in parallel
+
+MPI::COMM_WORLD.Barrier();
+
+//Determine the offsets again : now with threshold_stop!!!!
+oneFracDeviating = false;
+for (int count=0; count<MPIsize; count++){
+   Noffset[count] = NCurrentWalkersPerRank[count] - NDesiredWalkersPerRank[count] * fractionScaling;
+   double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling );
+   if (frac > threshold_stop){ oneFracDeviating = true; }
+}
 
 }
 
@@ -732,36 +646,5 @@ if (debuginfoprint){
 delete [] Noffset;
 
 #endif
-
-}
 */
-
-void AFQMC::init(int length,int D,int d,Random *ran){
-
-#ifdef _OPENMP
-   int num_omp_threads = omp_get_max_threads();
-#else
-   int num_omp_threads = 1;
-#endif
-
-   stor = new MPSstate * [num_omp_threads];
-
-   for(int i = 0;i < num_omp_threads;++i)
-      stor[i] = new MPSstate(length,D,d,ran);
-
-}
-
-void AFQMC::clear(){
-
-#ifdef _OPENMP
-   int num_omp_threads = omp_get_max_threads();
-#else
-   int num_omp_threads = 1;
-#endif
-
-   for(int i = 0;i < num_omp_threads;++i)
-      delete stor[i];
-
-   delete [] stor;
-
 }

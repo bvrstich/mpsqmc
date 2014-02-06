@@ -195,155 +195,45 @@ complex<double> MPSstate::normalize(){
 
 complex<double> MPSstate::LeftNormalize(){
 
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-   
-   ws->clean(myID);
+   ws->clean();
 
    for(int cnt=0; cnt< length; cnt++){
 
-      theTensors[cnt]->QR(ws->work1[myID],ws->work2[myID],ws->work3[myID],ws->work3[myID]+Dtrunc);
+      theTensors[cnt]->QR(ws->work1,ws->work2,ws->work3,ws->work3+Dtrunc);
 
       if (cnt!=length-1)
-         theTensors[cnt+1]->LeftMultiply(ws->work1[myID],ws->work2[myID]);
+         theTensors[cnt+1]->LeftMultiply(ws->work1,ws->work2);
 
    }
 
-   return ws->work1[myID][0];
+   return ws->work1[0];
 
 }
 
 complex<double> MPSstate::RightNormalize(){
 
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-   
-   ws->clean(myID);
+   ws->clean();
 
    for(int cnt=length-1; cnt>=0; cnt--){
    
-      theTensors[cnt]->LQ(ws->work1[myID],ws->work3[myID],ws->work3[myID]+Dtrunc);
+      theTensors[cnt]->LQ(ws->work1,ws->work3,ws->work3+Dtrunc);
 
       if(cnt!=0)
-         theTensors[cnt-1]->RightMultiply(ws->work1[myID],ws->work2[myID]);
+         theTensors[cnt-1]->RightMultiply(ws->work1,ws->work2);
    
    }
    
-   return ws->work1[myID][0];
+   return ws->work1[0];
 
 }
-
-/**
- * calculate the expectation value of the hamiltonian
- */
-complex<double> MPSstate::expectation(HamMPO *ham,MPSstate * OtherState){
-
-   int DO = ham->gD();
-   int DT_o = OtherState->gDtrunc();
-  
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-   
-   //reset the workspaces to zero
-   ws->clean(myID);
-
-   char notrans = 'N';
-   char trans = 'T';
-   char herm = 'C';
-
-   int inc = 1;
-
-   complex<double> one(1.0,0.0);
-   complex<double> zero(0.0,0.0);
-
-   int dimRthis = this->gDimAtBound(1);
-   int dimRother = OtherState->gDimAtBound(1);
-   int dimRmpo = ham->gvdim(1);
-
-   int m = dimRthis;
-   int n = phys_d * dimRmpo;
-   int k = phys_d;
-
-   zgemm_(&notrans,&trans, &m, &n, &k, &one, theTensors[0]->gStorage(),&m, ham->gstor(0) , &n, &zero, ws->work2[myID], &m);
-
-   m = dimRthis * dimRmpo;
-   n = dimRother;
-   k = phys_d;
-
-   zgemm_(&notrans, &herm, &m, &n, &k, &one, ws->work2[myID] , &m, OtherState->gMPStensor(0)->gStorage() , &n, &zero, ws->work1[myID], &m);
-
-   for(int site = 1;site < length;++site){
-
-      int dimRthis = this->gDimAtBound(site + 1);
-      int dimLthis = this->gDimAtBound(site);
-
-      int dimRother = OtherState->gDimAtBound(site + 1);
-      int dimLother = OtherState->gDimAtBound(site);
-
-      int dimLmpo = ham->gvdim(site);
-      int dimRmpo = ham->gvdim(site + 1);
-
-      m = dimLother * dimLmpo;
-      n = phys_d * dimRthis;
-      k = dimLthis;
-
-      zgemm_(&trans,&notrans, &m, &n, &k, &one, ws->work1[myID] , &k, theTensors[site]->gStorage() , &k, &zero, ws->work3[myID], &m);
-
-      //now contract with the MPO
-      m = dimRthis * dimLother;
-      n = dimRmpo * phys_d;
-      k = dimLmpo;
-
-      zgemm_(&trans,&notrans, &m, &n, &k, &one, ws->work3[myID] , &k, ham->gstor(site) , &k, &zero, ws->work2[myID], &m);
-
-      for(int s = 1;s < phys_d;++s)
-         zgemm_(&trans,&notrans, &m, &n, &k, &one, ws->work3[myID] + s*dimLmpo*dimRthis*dimLother , &k, ham->gstor(site) + s*dimLmpo*dimRmpo*phys_d, &k, &one, ws->work2[myID], &m);
-
-      m = dimRother;
-      n = dimRthis*dimRmpo;
-      k = dimLother;
-
-      zgemm_(&herm,&notrans, &m, &n, &k, &one, theTensors[site]->gStorage() , &k, ws->work2[myID] , &k, &zero, ws->work3[myID], &m);
-
-      for(int s = 1;s < phys_d;++s)
-         zgemm_(&herm,&notrans, &m, &n, &k, &one, theTensors[site]->gStorage(s) , &k, ws->work2[myID] + s*dimLother*dimRmpo*dimRthis , &k, &one, ws->work3[myID], &m);
-
-
-      //permute
-      for(int j = 0;j < dimRother;++j)
-         for(int o = 0;o < dimRmpo;++o)
-            for(int i = 0;i < dimRthis;++i)
-               ws->work1[myID][j*dimRmpo*dimRthis + o*dimRthis + i] = ws->work3[myID][o*dimRthis*dimRother + i*dimRother + j];
-
-   }
-
-   return ws->work1[myID][0];
-
-}
-
 
 complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
 
    int DO = theMPO->gDtrunc();
    int Dtrunc_other = OtherState->gDtrunc();
   
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-   
    //reset the workspaces to zero
-   ws->clean(myID);
+   ws->clean();
 
    char notrans = 'N';
    char trans = 'T';
@@ -368,7 +258,7 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
             complex<double> factor =  (*theMPO)(0,0,s_,s,o);
 
             if(std::abs(factor) > 1.0e-15)
-               zaxpy_(&sizeBlock,&factor, theTensors[0]->gStorage(s_), &inc, ws->work2[myID] + s*dimRmpo*dimRthis + o*dimRthis, &inc);
+               zaxpy_(&sizeBlock,&factor, theTensors[0]->gStorage(s_), &inc, ws->work2 + s*dimRmpo*dimRthis + o*dimRthis, &inc);
 
          }
 
@@ -376,7 +266,7 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
    n = dimRother;
    k = phys_d;
 
-   zgemm_(&notrans, &herm, &m, &n, &k, &one, ws->work2[myID] , &m, OtherState->gMPStensor(0)->gStorage() , &n, &zero, ws->work1[myID], &m);
+   zgemm_(&notrans, &herm, &m, &n, &k, &one, ws->work2 , &m, OtherState->gMPStensor(0)->gStorage() , &n, &zero, ws->work1, &m);
 
    for(int site = 1;site < theMPO->gLength();++site){
 
@@ -393,13 +283,13 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
       n = dimLother * dimLmpo;
       k = dimLthis;
 
-      zgemm_(&trans,&notrans, &m, &n, &k, &one, theTensors[site]->gStorage() , &k, ws->work1[myID] , &k, &zero, ws->work3[myID], &m);
+      zgemm_(&trans,&notrans, &m, &n, &k, &one, theTensors[site]->gStorage() , &k, ws->work1 , &k, &zero, ws->work3, &m);
 
       for(int i = 0;i < dimRthis;++i)
          for(int j = 0;j < dimLother;++j)
             for(int o = 0;o < dimRmpo;++o)
                for(int s = 0;s < phys_d;++s)
-                  ws->work2[myID][s*dimLother*dimRthis*dimRmpo + j*dimRthis*dimRmpo + o*dimRthis + i] = 0.0;
+                  ws->work2[s*dimLother*dimRthis*dimRmpo + j*dimRthis*dimRmpo + o*dimRthis + i] = 0.0;
 
       sizeBlock = dimRthis;
 
@@ -412,7 +302,7 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
 
                   if(std::abs(factor) > 1.0e-15)
                      for(int j = 0;j < dimLother;++j)
-                        zaxpy_(&sizeBlock,&factor, ws->work3[myID] + j*dimLmpo*dimRthis*phys_d + p*phys_d*dimRthis + s_*dimRthis, &inc, ws->work2[myID] + s*dimLother*dimRthis*dimRmpo + j*dimRthis*dimRmpo + o*dimRthis, &inc);
+                        zaxpy_(&sizeBlock,&factor, ws->work3 + j*dimLmpo*dimRthis*phys_d + p*phys_d*dimRthis + s_*dimRthis, &inc, ws->work2 + s*dimLother*dimRthis*dimRmpo + j*dimRthis*dimRmpo + o*dimRthis, &inc);
 
                }
 
@@ -420,32 +310,26 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
       for(int s = 0;s < phys_d;++s)
          for(int i = 0;i < dimLother;++i)
             for(int j = 0;j < dimRother;++j)
-               ws->work3[myID][s*dimLother*dimRother + i*dimRother + j] = OtherState->gMPStensor(site)->gStorage()[s*dimLother*dimRother + j*dimLother + i];
+               ws->work3[s*dimLother*dimRother + i*dimRother + j] = OtherState->gMPStensor(site)->gStorage()[s*dimLother*dimRother + j*dimLother + i];
        
       m = dimRthis * dimRmpo;
       n = dimRother;
       k = dimLother * phys_d;
 
-      zgemm_(&notrans,&herm, &m, &n, &k, &one, ws->work2[myID] , &m, ws->work3[myID] , &n, &zero, ws->work1[myID], &m);
+      zgemm_(&notrans,&herm, &m, &n, &k, &one, ws->work2 , &m, ws->work3 , &n, &zero, ws->work1, &m);
 
    }
 
-   return ws->work1[myID][0];
+   return ws->work1[0];
 
 }
 
 complex<double> MPSstate::InnerProduct(MPSstate * OtherState){
   
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-   
    //reset the workspaces to zero
-   ws->clean(myID);
+   ws->clean();
 
-   ws->work1[myID][0] = 1;
+   ws->work1[0] = 1;
 
    char notrans = 'N';
    char herm = 'C';
@@ -462,22 +346,22 @@ complex<double> MPSstate::InnerProduct(MPSstate * OtherState){
       int dimRother = OtherState->gDimAtBound(cnt+1);
 
       for (int cnt2=0; cnt2<dimRthis*dimRother; cnt2++)
-         ws->work2[myID][cnt2] = complex<double>(0.0,0.0);
+         ws->work2[cnt2] = complex<double>(0.0,0.0);
 
       for (int d_val=0;d_val < phys_d;d_val++){
 
-         zgemm_(&notrans, &notrans, &dimLother, &dimRthis, &dimLthis, &one, ws->work1[myID], &dimLother, theTensors[cnt]->gStorage(d_val), &dimLthis, &set, ws->work3[myID], &dimLother);
-         zgemm_(&herm, &notrans, &dimRother, &dimRthis, &dimLother, &one, OtherState->gMPStensor(cnt)->gStorage(d_val), &dimLother, ws->work3[myID], &dimLother, &one, ws->work2[myID], &dimRother);
+         zgemm_(&notrans, &notrans, &dimLother, &dimRthis, &dimLthis, &one, ws->work1, &dimLother, theTensors[cnt]->gStorage(d_val), &dimLthis, &set, ws->work3, &dimLother);
+         zgemm_(&herm, &notrans, &dimRother, &dimRthis, &dimLother, &one, OtherState->gMPStensor(cnt)->gStorage(d_val), &dimLother, ws->work3, &dimLother, &one, ws->work2, &dimRother);
 
       }
 
-      complex<double> * swap = ws->work1[myID];
-      ws->work1[myID] = ws->work2[myID];
-      ws->work2[myID] = swap;
+      complex<double> * swap = ws->work1;
+      ws->work1 = ws->work2;
+      ws->work2 = swap;
 
    }
 
-   return ws->work1[myID][0];
+   return ws->work1[0];
 
 }
 
@@ -639,14 +523,8 @@ void MPSstate::ApplyMPO(bool conj,MPO * theMPO, MPSstate * Psi0){
  */
 void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterJ1J2 * theTrotter){
 
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-
    //fill the allocated memory with the correct values
-   theTrotter->fillAFProp(myID,k,r,x);
+   theTrotter->fillAFProp(k,r,x);
 
    for(int site = 0;site < length;site++){
 
@@ -654,24 +532,24 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterJ1J2 * theTrotter){
       int size = sizeBlock * phys_d;
 
       for (int cnt=0; cnt<size; cnt++)
-         ws->work1[myID][cnt] = 0.0;
+         ws->work1[cnt] = 0.0;
 
       for(int phys_up=0; phys_up<phys_d; phys_up++)
          for(int phys_down=0; phys_down<phys_d; phys_down++){
 
-            complex<double> OperatorValue = theTrotter->gAFProp(myID,site,phys_up,phys_down);
+            complex<double> OperatorValue = theTrotter->gAFProp(site,phys_up,phys_down);
 
             if(std::abs(OperatorValue) > 1.0e-15){
 
                int inc = 1;
-               zaxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, ws->work1[myID] + phys_up*sizeBlock, &inc);
+               zaxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, ws->work1 + phys_up*sizeBlock, &inc);
 
             }
 
          }
 
       int inc = 1;
-      zcopy_(&size, ws->work1[myID], &inc, theTensors[site]->gStorage(), &inc);
+      zcopy_(&size, ws->work1, &inc, theTensors[site]->gStorage(), &inc);
 
    }
 
@@ -686,14 +564,8 @@ void MPSstate::ApplyAF(int k,int r,complex<double> x,TrotterJ1J2 * theTrotter){
  */
 void MPSstate::ApplyAF(int k,complex<double> x,TrotterJ1J2 * theTrotter){
 
-#ifdef _OPENMP
-   int myID = omp_get_thread_num();
-#else
-   int myID = 0;
-#endif
-
    //fill the allocated memory with the correct values
-   theTrotter->fillAFProp(myID,k,x,RN);
+   theTrotter->fillAFProp(k,x,RN);
 
    for(int site = 0;site < length;site++){
 
@@ -701,24 +573,24 @@ void MPSstate::ApplyAF(int k,complex<double> x,TrotterJ1J2 * theTrotter){
       int size = sizeBlock * phys_d;
 
       for (int cnt=0; cnt<size; cnt++)
-         ws->work1[myID][cnt] = 0.0;
+         ws->work1[cnt] = 0.0;
 
       for (int phys_up=0; phys_up<phys_d; phys_up++)
          for (int phys_down=0; phys_down<phys_d; phys_down++){
 
-            complex<double> OperatorValue = theTrotter->gAFProp(myID,site,phys_up,phys_down);
+            complex<double> OperatorValue = theTrotter->gAFProp(site,phys_up,phys_down);
 
             if(std::abs(OperatorValue) > 1.0e-15){
 
                int inc = 1;
-               zaxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, ws->work1[myID] + phys_up*sizeBlock, &inc);
+               zaxpy_(&sizeBlock, &OperatorValue, theTensors[site]->gStorage(phys_down), &inc, ws->work1 + phys_up*sizeBlock, &inc);
 
             }
 
          }
 
       int inc = 1;
-      zcopy_(&size, ws->work1[myID], &inc, theTensors[site]->gStorage(), &inc);
+      zcopy_(&size, ws->work1, &inc, theTensors[site]->gStorage(), &inc);
 
    }
 }

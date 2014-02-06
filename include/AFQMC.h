@@ -22,14 +22,10 @@ class AFQMC{
       //Let the walkers propagate for steps steps
       void Walk(const int steps);
 
-      static void init(int,int,int,Random *);
-
-      static void clear();
-
    private:
       
       //!backup storage for the 'error control'
-      static MPSstate **stor;
+      MPSstate *stor;
    
       /******************************
       *** Constructor information ***
@@ -72,9 +68,6 @@ class AFQMC{
       //Control the population of walkers based on scaling * weight
       void SeparatePopulationControl(const double scaling);
       
-      //The MPSstate is allocated and filled at MPIrank 0, and needs to be allocated and copied to the other ranks
-      MPSstate * BroadcastCopyConstruct(MPSstate * pointer);
-      
       //To control the populations on each rank
       void PopulationBalancing();
       
@@ -94,9 +87,6 @@ class AFQMC{
       //Trial wfn (one per thread)
       MPSstate * Psi0;
 
-      //Setup the trial wfn
-      void SetupTrial();
-      
       /******************
       *** The walkers ***
       ******************/
@@ -117,14 +107,8 @@ class AFQMC{
       //The MPI size
       int MPIsize;
       
-      //The max. number of openMP threads on this process
-      int * NThreadsPerRank;
-      
       //The desired walkers per rank
       int * NDesiredWalkersPerRank;
-      
-      //The desired walkers per rank
-      int * NCurrentWalkersPerRank;
       
       //The max. allowed number of walkers on this process
       int myMaxNWalkers;

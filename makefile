@@ -17,15 +17,14 @@ CPPSRC	= main.cpp\
            OpI.cpp\
            Op0.cpp\
            MPO.cpp\
-           AFMPO.cpp\
+           J1J2MPO.cpp\
            MPStensor.cpp\
            TwoSiteObject.cpp\
            MPSstate.cpp\
            Walker.cpp\
            TrotterJ1J2.cpp\
-           J1J2MPO.cpp\
-           HamMPO.cpp\
            AFQMC.cpp\
+           AFMPO.cpp\
            WorkSpace.cpp
 
 OBJ	= $(CPPSRC:.cpp=.o)
@@ -38,16 +37,16 @@ THIS_FOLDER = .
 
 INCLUDE = ./include
 
-LIBS = -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -liomp5 -lpthread
+LIBS = -llapack -lblas
 
-CC  = icc
-CXX = icpc
+CC  = mpicc.mpich2
+CXX = mpicxx.mpich2
 
 # -----------------------------------------------------------------------------
 #   Compiler & Linker flags
 # -----------------------------------------------------------------------------
-CFLAGS = -I$(INCLUDE) -O3 -ipo -openmp
-LDFLAGS	= -O3 -ipo -openmp
+CFLAGS = -g -I$(INCLUDE) -I$(INCLUDE2) -Wall
+LDFLAGS	= -g -Wall
 
 
 # =============================================================================

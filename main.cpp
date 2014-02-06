@@ -13,7 +13,6 @@
 #include "AFQMC.h"
 #include "WorkSpace.h"
 #include "J1J2MPO.h"
-#include "HamMPO.h"
 
 using namespace std;
 

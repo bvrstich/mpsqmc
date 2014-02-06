@@ -18,6 +18,20 @@ Walker::Walker(MPSstate * theState, const double weight,int n_trot){
 
 }
 
+Walker::Walker(MPSstate * theState,double weight,complex<double> overlap,complex<double> *VL_in,int n_trot){
+
+   this->theState      = new MPSstate(theState);
+   this->weight        = weight;
+   this->overlap       = overlap;
+   this->n_trot        = n_trot;
+
+   VL = new complex<double> [3*n_trot];
+
+   for(int i = 0;i < 3*n_trot;++i)
+      VL[i] = VL_in[i];
+
+}
+
 Walker::Walker(Walker * theWalker){
 
    this->theState      = new MPSstate(theWalker->gState());
@@ -84,6 +98,12 @@ complex<double> Walker::gEL() const{
 complex<double> Walker::gVL(int k,int r) const{
    
    return VL[r*n_trot + k]; 
+   
+}
+
+complex<double> *Walker::gVL(){
+   
+   return VL; 
    
 }
 

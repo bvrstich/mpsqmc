@@ -11,6 +11,8 @@ class Walker{
    
       //Constructor copying an MPSstate
       Walker(MPSstate * theState, const double weight,int n_trot);
+
+      Walker(MPSstate * theState, double weight,complex<double> overlap,complex<double> *VL,int n_trot);
       
       //Constructor copying an entire Walker
       Walker(Walker * theWalker);
@@ -52,6 +54,8 @@ class Walker{
       complex<double> gEL() const;
 
       complex<double> gVL(int,int) const;
+
+      complex<double> *gVL();
       
    private:
    

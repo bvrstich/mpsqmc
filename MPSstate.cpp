@@ -88,8 +88,6 @@ MPSstate::MPSstate(const char *filename,Random *RN){
    
    in >> length >> Dtrunc >> phys_d;
 
-   std::cout << length << "\t" << Dtrunc << "\t" << phys_d << endl;
-
    this->RN = RN;
 
    //get the dimensions

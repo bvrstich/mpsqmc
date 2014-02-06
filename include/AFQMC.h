@@ -109,6 +109,8 @@ class AFQMC{
       
       //The desired walkers per rank
       int * NDesiredWalkersPerRank;
+
+      int totalNWalkers;
       
       //The max. allowed number of walkers on this process
       int myMaxNWalkers;

@@ -214,9 +214,9 @@ void AFQMC::SetupWalkers(bool copyTrial){
       char filename[100];
 
       if(J2 == 10)
-         sprintf(filename,"/home/bright/bestanden/programmas/dmrg/J1J2/%dx%d/J2=1.0/PsiW/DT=%d.mps",L,L,DT);
+         sprintf(filename,"input/J1J2/%dx%d/J2=1.0/PsiW/DT=%d.mps",L,L,DT);
       else
-         sprintf(filename,"/home/bright/bestanden/programmas/dmrg/J1J2/%dx%d/J2=0.%d/PsiW/DT=%d.mps",L,L,j2,DT);
+         sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/PsiW/DT=%d.mps",L,L,j2,DT);
 
       MPSstate input(filename,RN);
 

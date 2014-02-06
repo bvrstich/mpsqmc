@@ -131,11 +131,6 @@ AFQMC::~AFQMC(){
    //AFQMC::SetupTrial
    delete Psi0;
 
-   for(int k = 0;k < 3*n_trot;++k)
-      delete VPsi0[k];
-
-   delete [] VPsi0;
-
    //AFQMC::SetupWalkers
    for (int cnt = 0;cnt < theWalkers.size(); cnt++)
       delete theWalkers[cnt];
@@ -154,34 +149,6 @@ void AFQMC::SetupTrial(){
 
 #ifdef USE_MPI_IN_MPSQMC
    Psi0 = BroadcastCopyConstruct(Psi0);
-#endif
-
-   int L = sqrt(theTrotter->glength());
-
-   double J2 = theTrotter->gJ2();
-   int j2 = 10*J2;
-
-   char filename[100];
-
-   //now Apply the hermitian conjugate of the V's times trialstate
-   if(MPIrank==0){
-
-      VPsi0 = new MPSstate * [3*n_trot];
-
-      for(int r = 0;r < 3;++r)
-         for(int k = 0;k < n_trot;++k){
-
-            VPsi0[r*n_trot + k] = new MPSstate(theTrotter->glength(),DT,theTrotter->gPhys_d(),RN);
-            VPsi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
-
-         }
-
-   }
-
-#ifdef USE_MPI_IN_MPSQMC
-   for(int r = 0;r < 3;++r)
-      for(int k = 0;k < length;++k)
-         VPsi0[r*n_trot + k] = BroadcastCopyConstruct(VPsi0[r*n_trot + k]);
 #endif
 
 }
@@ -247,9 +214,9 @@ void AFQMC::SetupWalkers(bool copyTrial){
       char filename[100];
 
       if(J2 == 10)
-         sprintf(filename,"input/J1J2/%dx%d/J2=1.0/PsiW/DT=%d.mps",L,L,DT);
+         sprintf(filename,"/home/bright/bestanden/programmas/dmrg/J1J2/%dx%d/J2=1.0/PsiW/DT=%d.mps",L,L,DT);
       else
-         sprintf(filename,"input/J1J2/%dx%d/J2=0.%d/PsiW/DT=%d.mps",L,L,j2,DT);
+         sprintf(filename,"/home/bright/bestanden/programmas/dmrg/J1J2/%dx%d/J2=0.%d/PsiW/DT=%d.mps",L,L,j2,DT);
 
       MPSstate input(filename,RN);
 
@@ -257,7 +224,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
       theWalkers[0]->sOverlap(Psi0);
       theWalkers[0]->sEL(theMPO,Psi0);
-      theWalkers[0]->sVL(VPsi0);
+      theWalkers[0]->sVL(theTrotter,Psi0);
 
    }
    else{
@@ -267,7 +234,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
       theWalkers[0]->sOverlap(Psi0);
       theWalkers[0]->sEL(theMPO,Psi0);
-      theWalkers[0]->sVL(VPsi0);
+      theWalkers[0]->sVL(theTrotter,Psi0);
 
    }
 
@@ -282,7 +249,7 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
          theWalkers[cnt]->sOverlap(Psi0);
          theWalkers[cnt]->sEL(theMPO,Psi0);
-         theWalkers[cnt]->sVL(VPsi0);
+         theWalkers[cnt]->sVL(theTrotter,Psi0);
 
       }
 
@@ -445,7 +412,7 @@ double AFQMC::PropagateSeparately(){
 
          theWalkers[walker]->multWeight(scale);
 
-         theWalkers[walker]->sVL(VPsi0);
+         theWalkers[walker]->sVL(theTrotter,Psi0);
 
          sum += theWalkers[walker]->gWeight();
 

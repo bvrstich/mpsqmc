@@ -11,6 +11,7 @@ using std::complex;
 
 #include "MPStensor.h"
 #include "MPO.h"
+#include "HamMPO.h"
 #include "TwoSiteObject.h"
 #include "TrotterJ1J2.h"
 
@@ -74,6 +75,8 @@ class MPSstate{
 
       //Calculate <phi|O|psi>
       complex<double> expectation(MPO *,MPSstate * OtherState);
+
+      complex<double> expectation(HamMPO *,MPSstate * OtherState);
 
       void ChangePhase();
       

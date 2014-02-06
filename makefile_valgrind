@@ -22,6 +22,8 @@ CPPSRC	= main.cpp\
            TwoSiteObject.cpp\
            MPSstate.cpp\
            Walker.cpp\
+           J1J2MPO.cpp\
+           HamMPO.cpp\
            TrotterJ1J2.cpp\
            AFQMC.cpp\
            WorkSpace.cpp

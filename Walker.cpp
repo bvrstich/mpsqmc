@@ -142,10 +142,10 @@ void Walker::sEL(complex<double> EL_in){
 /** 
  * set the v operator Energy: overlap has to be set first!
  */
-void Walker::sVL(MPSstate ** VPsi0){
+void Walker::sVL(TrotterJ1J2 *theTrotter,MPSstate *Psi0){
 
    for(int r = 0;r < 3;++r)
       for(int k = 0;k < n_trot;++k)
-         VL[r*n_trot + k] = theState->InnerProduct(VPsi0[r*n_trot + k])/overlap;
+         VL[r*n_trot + k] = theState->expectation(theTrotter->gV_Op(k,r),Psi0)/overlap;
 
 }

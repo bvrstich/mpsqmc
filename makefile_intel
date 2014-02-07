@@ -24,7 +24,6 @@ CPPSRC	= main.cpp\
            Walker.cpp\
            TrotterJ1J2.cpp\
            J1J2MPO.cpp\
-           HamMPO.cpp\
            AFQMC.cpp\
            WorkSpace.cpp
 

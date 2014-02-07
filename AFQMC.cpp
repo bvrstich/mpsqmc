@@ -414,18 +414,6 @@ double AFQMC::PropagateSeparately(){
 
          theWalkers[walker]->sVL(theTrotter,Psi0);
 
-         cout << endl;
-         cout << "walker \t" << walker << endl;
-         cout << endl;
-
-         for(int k = 0;k < n_trot;++k)
-            for(int r = 0;r < 3;++r){
-
-               cout << k << "\t" << r << "\t" << theWalkers[walker]->gVL(k,r) << endl;
-               cout << k << "\t" << r << "\t" << theWalkers[walker]->gState()->expectation(theTrotter->gV_Op(k,r),Psi0)/theWalkers[walker]->gOverlap() << endl;
-
-            }
-
          sum += theWalkers[walker]->gWeight();
 
       }

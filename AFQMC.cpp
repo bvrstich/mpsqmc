@@ -371,7 +371,7 @@ double AFQMC::PropagateSeparately(){
 #endif
 
       //backup the state
-      *(stor[myID]) = *(theWalkers[walker]->gState());
+      stor[myID]->copy(theWalkers[walker]->gState());
       
       //now loop over the auxiliary fields:
       for(int k = 0;k < n_trot;++k)
@@ -395,7 +395,7 @@ double AFQMC::PropagateSeparately(){
          num_rej++;
 
          //copy the state back!
-         *(theWalkers[walker]->gState())  = *(stor[myID]);
+         theWalkers[walker]->gState()->copy(stor[myID]);
 
       }
       else{//go on
@@ -413,6 +413,18 @@ double AFQMC::PropagateSeparately(){
          theWalkers[walker]->multWeight(scale);
 
          theWalkers[walker]->sVL(theTrotter,Psi0);
+
+         cout << endl;
+         cout << "walker \t" << walker << endl;
+         cout << endl;
+
+         for(int k = 0;k < n_trot;++k)
+            for(int r = 0;r < 3;++r){
+
+               cout << k << "\t" << r << "\t" << theWalkers[walker]->gVL(k,r) << endl;
+               cout << k << "\t" << r << "\t" << theWalkers[walker]->gState()->expectation(theTrotter->gV_Op(k,r),Psi0)/theWalkers[walker]->gOverlap() << endl;
+
+            }
 
          sum += theWalkers[walker]->gWeight();
 

@@ -254,3 +254,10 @@ ostream &operator<<(ostream &output,const MPStensor &tensor){
    return output;
 
 }
+
+void MPStensor::copy(MPStensor *toCopy){
+
+   int inc = 1;
+   zcopy_(&storageSize,toCopy->gStorage(),&inc,storage,&inc);
+
+}

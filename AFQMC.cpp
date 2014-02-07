@@ -275,7 +275,7 @@ double AFQMC::PropagateSeparately(){
    for(int walker=0; walker < theWalkers.size(); walker++){
 
       //backup the state
-      *stor = *(theWalkers[walker]->gState());
+      stor->copy(theWalkers[walker]->gState());
 
       //now loop over the auxiliary fields:
       for(int k = 0;k < n_trot;++k)
@@ -299,7 +299,7 @@ double AFQMC::PropagateSeparately(){
          num_rej++;
 
          //copy the state back!
-         *(theWalkers[walker]->gState())  = *(stor);
+         theWalkers[walker]->gState()->copy(stor);
 
       }
       else{//go on
@@ -480,8 +480,8 @@ void AFQMC::BubbleSort(double * values, int * order, const int length){
 void AFQMC::PopulationBalancing(){
 
 #ifdef USE_MPI_IN_MPSQMC
-   const double threshold_start = 0.1;
-   const double threshold_stop  = 0.03;
+   const double threshold_start = 0.01;
+   const double threshold_stop  = 0.01;
    const bool clusterhasinfiniband = true;
 
    double * Noffset = new double[MPIsize];
@@ -527,6 +527,8 @@ void AFQMC::PopulationBalancing(){
 
    }
 
+   //broadcast!
+
    if(oneFracDeviating){
 
       int * work = new int[MPIsize];
@@ -536,6 +538,10 @@ void AFQMC::PopulationBalancing(){
 
          communication_round++;
 
+         cout << endl;
+         cout << MPIrank << "\t" << communication_round << endl;
+         cout << endl;
+
          //Do a bubble sort from large to small (positive to negative). Not optimal algo, optimal = quicksort (dlasrt_) --> but multi-array sort in lapack?
          BubbleSort(Noffset, work, MPIsize); // Now for all index: Noffset [ work[index] ] >= Noffset[ work[index+1] ]
 
@@ -544,6 +550,8 @@ void AFQMC::PopulationBalancing(){
 
             const int sender = work[comm];
             const int receiver = work[MPIsize - 1 - comm];
+
+            cout << sender << "\t" << Noffset[sender] << "\t|\t" << receiver << "\t" <<  Noffset[receiver] << endl;
 
             if ((Noffset[sender] > 0.0) && (Noffset[receiver] < 0.0)){
 
@@ -654,7 +662,7 @@ void AFQMC::PopulationBalancing(){
 
                double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
 
-               if(frac > threshold_start) 
+               if(frac > threshold_stop) 
                   oneFracDeviating = true; //if one or more offsets are too large: redistribute       
             }
          }

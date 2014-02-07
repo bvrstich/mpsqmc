@@ -67,7 +67,9 @@ class MPStensor{
       
       //Reset the virtual dimensions; the storage is only reset if the required storage size is larger than the current storage size
       void Reset(const int dimL, const int dimR);
-      
+     
+      void copy(MPStensor *toCopy);
+ 
    private:
    
       //The random number generator

@@ -649,3 +649,14 @@ void MPSstate::ClearWork(){
    delete ws;
 
 }
+
+
+/**
+ * copy the tensors!
+ */
+void MPSstate::copy(MPSstate *toCopy){
+
+   for(int i = 0;i < length;++i)
+      theTensors[i]->copy(toCopy->gMPStensor(i));
+
+}

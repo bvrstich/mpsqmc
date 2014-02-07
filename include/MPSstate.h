@@ -100,6 +100,8 @@ class MPSstate{
       
       static void InitWork(int D,int DO,int d);
       static void ClearWork();
+
+      void copy(MPSstate *toCopy);
       
    private:
    

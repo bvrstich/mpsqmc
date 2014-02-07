@@ -253,7 +253,7 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
       for(int s = 0;s < phys_d;++s)
          for(int s_ = 0;s_ < phys_d;++s_){
 
-            complex<double> factor =  (*theMPO)(0,0,s_,s,o);
+            complex<double> factor =  (*theMPO)(0,0,s,s_,o);
 
             if(std::abs(factor) > 1.0e-15)
                zaxpy_(&sizeBlock,&factor, theTensors[0]->gStorage(s_), &inc, ws->work2 + s*dimRmpo*dimRthis + o*dimRthis, &inc);
@@ -296,7 +296,7 @@ complex<double> MPSstate::expectation(MPO *theMPO,MPSstate * OtherState){
             for(int p = 0;p < dimLmpo;++p)
                for(int s_ = 0;s_ < phys_d;++s_){
 
-                  complex<double> factor =  (*theMPO)(site,p,s_,s,o);
+                  complex<double> factor =  (*theMPO)(site,p,s,s_,o);
 
                   if(std::abs(factor) > 1.0e-15)
                      for(int j = 0;j < dimLother;++j)

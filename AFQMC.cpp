@@ -53,7 +53,7 @@ AFQMC::AFQMC(J1J2MPO *theMPO,TrotterJ1J2 *theTrotter,Random *RN, MPSstate *Psi0_
    MPI::COMM_WORLD.Barrier();
 #endif
 
-   SetupWalkers(true);
+   SetupWalkers(false);
 
 }
 
@@ -446,7 +446,11 @@ double AFQMC::PropagateSeparately(){
          theWalkers[walker]->multWeight(scale);
 
          theWalkers[walker]->sVL(VPsi0);
-
+/*
+         for(int k = 0;k < n_trot;++k)
+            for(int r = 0;r < 3;++r)
+               cout << k << "\t" << r << "\t" << theWalkers[walker]->gVL(k,r) << endl;
+*/
          sum += theWalkers[walker]->gWeight();
 
       }

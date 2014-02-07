@@ -41,9 +41,9 @@ int main(int argc,char *argv[]){
 
    MPSstate Psi0(filename,&RN);
 
-   int Nwalkers = 1000;
+   int Nwalkers = 1;
    double dtau = 0.01;
-   int nSteps = 100000;
+   int nSteps = 1;
 
    TrotterJ1J2 theTrotter(true,L,d,(double)0.1*J2,dtau);
  

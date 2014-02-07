@@ -293,7 +293,7 @@ double AFQMC::PropagateSeparately(){
       complex<double> tmpEL = theWalkers[walker]->gState()->expectation(theMPO,Psi0)/tmpOverlap;
 
       if( (std::real(tmpEL) < std::real(theWalkers[walker]->gEL()) - width) || 
-         
+
             (std::real(tmpEL) > std::real(theWalkers[walker]->gEL()) + width) ){//very rare event, will cause numerical unstability
 
          num_rej++;
@@ -480,8 +480,8 @@ void AFQMC::BubbleSort(double * values, int * order, const int length){
 void AFQMC::PopulationBalancing(){
 
 #ifdef USE_MPI_IN_MPSQMC
-   const double threshold_start = 0.01;
-   const double threshold_stop  = 0.01;
+   const double threshold_start = 0.1;
+   const double threshold_stop  = 0.03;
    const bool clusterhasinfiniband = true;
 
    double * Noffset = new double[MPIsize];
@@ -528,6 +528,8 @@ void AFQMC::PopulationBalancing(){
    }
 
    //broadcast!
+   MPI_Bcast(Noffset,MPIsize,MPI_DOUBLE,0,MPI_COMM_WORLD);
+   MPI_Bcast(&oneFracDeviating,1,MPI::BOOL,0,MPI_COMM_WORLD);
 
    if(oneFracDeviating){
 
@@ -538,10 +540,6 @@ void AFQMC::PopulationBalancing(){
 
          communication_round++;
 
-         cout << endl;
-         cout << MPIrank << "\t" << communication_round << endl;
-         cout << endl;
-
          //Do a bubble sort from large to small (positive to negative). Not optimal algo, optimal = quicksort (dlasrt_) --> but multi-array sort in lapack?
          BubbleSort(Noffset, work, MPIsize); // Now for all index: Noffset [ work[index] ] >= Noffset[ work[index+1] ]
 
@@ -550,8 +548,6 @@ void AFQMC::PopulationBalancing(){
 
             const int sender = work[comm];
             const int receiver = work[MPIsize - 1 - comm];
-
-            cout << sender << "\t" << Noffset[sender] << "\t|\t" << receiver << "\t" <<  Noffset[receiver] << endl;
 
             if ((Noffset[sender] > 0.0) && (Noffset[receiver] < 0.0)){
 
@@ -607,15 +603,15 @@ void AFQMC::PopulationBalancing(){
                         MPI::COMM_WORLD.Recv(&overlap, 1, MPI::DOUBLE_COMPLEX, sender, 0, status);
                         MPI::COMM_WORLD.Recv(&EL, 1, MPI::DOUBLE_COMPLEX, sender, 0, status);
 
-                        complex<double> *VL;
-
                         int dim = 3*n_trot;
-                        MPI::COMM_WORLD.Send(VL,dim , MPI::DOUBLE_COMPLEX, receiver, 0);
+                        complex<double> *VL = new complex<double> [dim];
+
+                        MPI::COMM_WORLD.Recv(VL,dim , MPI::DOUBLE_COMPLEX, sender, 0,status);
 
                         Walker *walk;
                         theWalkers.push_back(walk);
 
-                        theWalkers[theWalkers.size() - 1] = new Walker(theWalkers[0]->gState(),weight, overlap, VL,n_trot);
+                        theWalkers[theWalkers.size() - 1] = new Walker(theWalkers[0]->gState(),weight, overlap, EL,VL,n_trot);
 
                         for(int site = 0;site < Psi0->gLength();site++){
 
@@ -626,6 +622,8 @@ void AFQMC::PopulationBalancing(){
                            MPI::COMM_WORLD.Recv(RecvStorage, dim, MPI::DOUBLE_COMPLEX, sender, 0, status);
 
                         }
+
+                        delete [] VL;
 
                      }
 
@@ -662,10 +660,18 @@ void AFQMC::PopulationBalancing(){
 
                double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
 
+               cout << "Deviation of average occupation on rank\t" << count << " = " << Noffset[count] << "\tFractional offset:\t" << frac << endl;
+
                if(frac > threshold_stop) 
                   oneFracDeviating = true; //if one or more offsets are too large: redistribute       
             }
+
+            cout << endl;
          }
+
+         //broadcast!
+         MPI_Bcast(Noffset,MPIsize,MPI_DOUBLE,0,MPI_COMM_WORLD);
+         MPI_Bcast(&oneFracDeviating,1,MPI::BOOL,0,MPI_COMM_WORLD);
 
       }
 

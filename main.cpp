@@ -41,7 +41,7 @@ int main(int argc,char *argv[]){
 
    MPSstate Psi0(filename,&RN);
 
-   int Nwalkers = 1000;
+   int Nwalkers = 128;
    double dtau = 0.01;
    int nSteps = 100000;
 

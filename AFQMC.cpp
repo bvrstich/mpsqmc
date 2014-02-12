@@ -490,6 +490,9 @@ void AFQMC::PopulationBalancing(){
    totalNWalkers = 0;
    int nwalk = theWalkers.size();
 
+   vector<int> nwalkers(MPIsize);
+   nwalkers[MPIrank] = nwalk;
+
    MPI::COMM_WORLD.Allreduce(&nwalk, &totalNWalkers, 1, MPI::INT, MPI::SUM);
 
    const double fractionScaling = (double) totalNWalkers / (double)totalNDesiredWalkers; //We proportionally want to distribute the total load
@@ -501,15 +504,26 @@ void AFQMC::PopulationBalancing(){
    MPI::COMM_WORLD.Barrier();
 
    //send and receive the offsets
-   if(MPIrank > 0)
+   if(MPIrank > 0){
+
       MPI_Send(&Noffset[MPIrank],1,MPI_DOUBLE,0,MPIrank,MPI_COMM_WORLD);
+      MPI_Send(&nwalkers[MPIrank],1,MPI_DOUBLE,0,MPIrank,MPI_COMM_WORLD);
+
+   }
 
    MPI::COMM_WORLD.Barrier();
 
    //receive
-   if(MPIrank == 0)
-      for(int rank = 1;rank < MPIsize;++rank)
+   if(MPIrank == 0){
+
+      for(int rank = 1;rank < MPIsize;++rank){
+
          MPI_Recv(&Noffset[rank],1,MPI_DOUBLE,rank,rank,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+         MPI_Recv(&nwalkers[rank],1,MPI_DOUBLE,rank,rank,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+
+      }
+
+   }
 
    if(MPIrank == 0){
       cout << endl;
@@ -517,7 +531,7 @@ void AFQMC::PopulationBalancing(){
 
          double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
 
-         cout << "Deviation of average occupation on rank\t" << count << " = " << Noffset[count] << "\tFractional offset:\t" << frac << endl;
+         cout << "Number of walkers on rank\t"<< count << " = " << nwalkers[count] << "\tdeviation:\t" << Noffset[count] << "\tFractional offset:\t" << frac << endl;
 
          if(frac > threshold_start) 
             oneFracDeviating = true; //if one or more offsets are too large: redistribute       
@@ -551,9 +565,11 @@ void AFQMC::PopulationBalancing(){
 
             if ((Noffset[sender] > 0.0) && (Noffset[receiver] < 0.0)){
 
-               int amount = (int) min(Noffset[sender], -Noffset[receiver]); //This explains the "until drained" statement.
+               int amount = (int) max(Noffset[sender], -Noffset[receiver]); //This explains the "until drained" statement.
 
                if (amount > 0){
+
+                  cout << "I DO STUFF!!" << endl;
 
                   if (MPIrank == sender){
 
@@ -661,9 +677,10 @@ void AFQMC::PopulationBalancing(){
                double frac = fabs( Noffset[count] ) / ( NDesiredWalkersPerRank[count] * fractionScaling ); //and the percentage of offset
 
                cout << "Deviation of average occupation on rank\t" << count << " = " << Noffset[count] << "\tFractional offset:\t" << frac << endl;
-
+/*
                if(frac > threshold_stop) 
                   oneFracDeviating = true; //if one or more offsets are too large: redistribute       
+ */
             }
 
             cout << endl;

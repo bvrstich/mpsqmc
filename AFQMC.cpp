@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
-#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
+#include <omp.h>
 #include <vector>
 
 #include "AFQMC.h"

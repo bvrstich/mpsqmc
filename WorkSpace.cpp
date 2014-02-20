@@ -1,4 +1,5 @@
-#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
+//#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
+#include <omp.h>
 #include "WorkSpace.h"
 
 /**

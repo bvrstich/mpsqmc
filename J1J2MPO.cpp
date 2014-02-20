@@ -62,79 +62,58 @@ J1J2MPO::J1J2MPO(bool pbc,int L, int phys_d,double J2) : MPO(){
    }
    else{
 
-    for (int row=1; row< L - 1; row++)
-         for (int col=1; col < L -1; col++){
+      for (int row=0; row< L; row++)
+         for (int col=0; col< L; col++){
 
             int number = row + L * col;
 
-            int neighbour1 = row + 1 + L * col;
-            int neighbour2 = row - 1 + L * col;
-            int neighbour3 = row                   + L * ( col - 1 );
-            int neighbour4 = row                   + L * ( col + 1 );
+            int neighbour1 = (row + 1       )%L + L * col;
+            int neighbour2 = (row - 1 + L)%L + L * col;
+            int neighbour3 = row                   + L * ((col - 1 + L)%L);
+            int neighbour4 = row                   + L * ((col + 1       )%L);
 
-            J[number*length+neighbour1] = 1.0;
-            J[number*length+neighbour2] = 1.0;
-            J[number*length+neighbour3] = 1.0;
-            J[number*length+neighbour4] = 1.0;
+            J[number*length + neighbour1] = 1.0;
+            J[number*length + neighbour2] = 1.0;
+            J[number*length + neighbour3] = 1.0;
+            J[number*length + neighbour4] = 1.0;
 
-            J[neighbour1*length+number] = 1.0;
-            J[neighbour2*length+number] = 1.0;
-            J[neighbour3*length+number] = 1.0;
-            J[neighbour4*length+number] = 1.0;
+            int neighbour5 = (row + 1       )%L + L * ((col + 1       )%L);
+            int neighbour6 = (row + 1       )%L + L * ((col - 1 + L)%L);
+            int neighbour7 = (row - 1 + L)%L + L * ((col - 1 + L)%L);
+            int neighbour8 = (row - 1 + L)%L + L * ((col + 1       )%L);
 
-            int neighbour5 = row + 1 + L * (col + 1 );
-            int neighbour6 = row + 1 + L * (col - 1 );
-            int neighbour7 = row - 1 + L * (col - 1 );
-            int neighbour8 = row - 1 + L * (col + 1 );
-
-            J[number*length+neighbour5] = J2;
-            J[number*length+neighbour6] = J2;
-            J[number*length+neighbour7] = J2;
-            J[number*length+neighbour8] = J2;
-
-            J[neighbour5*length+number] = J2;
-            J[neighbour6*length+number] = J2;
-            J[neighbour7*length+number] = J2;
-            J[neighbour8*length+number] = J2;
+            J[number*length + neighbour5] = J2;
+            J[number*length + neighbour6] = J2;
+            J[number*length + neighbour7] = J2;
+            J[number*length + neighbour8] = J2;
 
          }
 
-      //edges
-      for (int col=0; col < L -1; col++){
+      //now remove the pbc part:
 
-         //row = 0
-         int number = L * col;
-         int neighbour = L * ( col + 1 );
+      // no row 0 -> L - 1 coupling for a cols
+      for(int col1 = 0;col1 < L;++col1)
+         for(int col2 = 0;col2 < L;++col2){
 
-         J[number*length+neighbour] = 1.0;
-         J[neighbour*length+number] = 1.0;
+            int num1 = L * col1;//row 0
+            int num2 = L - 1 + L * col2;//row L - 1
 
-         //row = L - 1
-         number = L - 1 + L * col;
-         neighbour = L - 1 + L * ( col + 1 );
+            J[num1*length + num2] = 0.0;
+            J[num2*length + num1] = 0.0;
 
-         J[number*length+neighbour] = 1.0;
-         J[neighbour*length+number] = 1.0;
+         }
 
-      }
+      // no col 0 -> L - 1 coupling for all rows
+      for(int row1 = 0;row1 < L;++row1)
+         for(int row2 = 0;row2 < L;++row2){
 
-      for (int row=0; row < L -1; row++){
+            int num1 = row1;//col 0
+            int num2 = row2 + L * (L - 1);//col L - 1
 
-         //col = 0
-         int number = row;
-         int neighbour = row + 1;
- 
-         J[number*length+neighbour] = 1.0;
-         J[neighbour*length+number] = 1.0;
+            J[num1*length + num2] = 0.0;
+            J[num2*length + num1] = 0.0;
 
-         //col = L - 1
-         number = row + L * (L - 1);
-         neighbour = row + 1 + L * (L - 1);
-
-         J[number*length+neighbour] = 1.0;
-         J[neighbour*length+number] = 1.0;
-
-      }
+         }
 
    }
 

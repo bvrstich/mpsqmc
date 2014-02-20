@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <algorithm>
-#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
+#include <omp.h>
 #include "MPSstate.h"
 #include "Lapack.h"
 #include "Operator.h"

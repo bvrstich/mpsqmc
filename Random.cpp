@@ -2,8 +2,8 @@
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
-//#include <omp.h>
-#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
+#include <omp.h>
+//#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
 #include <time.h>
 
 #include "Random.h"

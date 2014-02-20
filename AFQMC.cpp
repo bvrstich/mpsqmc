@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
-#include <omp.h>
+#include </opt/intel/composer_xe_2013.0.079/compiler/include/omp.h>
 #include <vector>
 
 #include "AFQMC.h"
@@ -131,6 +131,11 @@ AFQMC::~AFQMC(){
    //AFQMC::SetupTrial
    delete Psi0;
 
+   for(int k = 0;k < 3*n_trot;++k)
+      delete VPsi0[k];
+
+   delete [] VPsi0;
+
    //AFQMC::SetupWalkers
    for (int cnt = 0;cnt < theWalkers.size(); cnt++)
       delete theWalkers[cnt];
@@ -146,6 +151,21 @@ AFQMC::~AFQMC(){
  * construct the trial wavefunction
  */
 void AFQMC::SetupTrial(){
+
+   //now Apply the hermitian conjugate of the V's times trialstate
+   if(MPIrank==0){
+
+      VPsi0 = new MPSstate * [3*n_trot];
+
+      for(int r = 0;r < 3;++r)
+         for(int k = 0;k < n_trot;++k){
+
+            VPsi0[r*n_trot + k] = new MPSstate(theTrotter->glength(),DT,theTrotter->gPhys_d(),RN);
+            VPsi0[r*n_trot + k]->ApplyMPO(true,theTrotter->gV_Op(k,r) , Psi0);
+
+         }
+
+   }
 
 #ifdef USE_MPI_IN_MPSQMC
    Psi0 = BroadcastCopyConstruct(Psi0);
@@ -224,7 +244,8 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
       theWalkers[0]->sOverlap(Psi0);
       theWalkers[0]->sEL(theMPO,Psi0);
-      theWalkers[0]->sVL(theTrotter,Psi0);
+      theWalkers[0]->sVL(VPsi0);
+      //theWalkers[0]->sVL(theTrotter,Psi0);
 
    }
    else{
@@ -234,7 +255,8 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
       theWalkers[0]->sOverlap(Psi0);
       theWalkers[0]->sEL(theMPO,Psi0);
-      theWalkers[0]->sVL(theTrotter,Psi0);
+      //theWalkers[0]->sVL(theTrotter,Psi0);
+      theWalkers[0]->sVL(VPsi0);
 
    }
 
@@ -249,7 +271,8 @@ void AFQMC::SetupWalkers(bool copyTrial){
 
          theWalkers[cnt]->sOverlap(Psi0);
          theWalkers[cnt]->sEL(theMPO,Psi0);
-         theWalkers[cnt]->sVL(theTrotter,Psi0);
+         //theWalkers[cnt]->sVL(theTrotter,Psi0);
+         theWalkers[cnt]->sVL(VPsi0);
 
       }
 
@@ -412,7 +435,8 @@ double AFQMC::PropagateSeparately(){
 
          theWalkers[walker]->multWeight(scale);
 
-         theWalkers[walker]->sVL(theTrotter,Psi0);
+         //theWalkers[walker]->sVL(theTrotter,Psi0);
+         theWalkers[walker]->sVL(VPsi0);
 
          sum += theWalkers[walker]->gWeight();
 
